@@ -14,9 +14,14 @@ CONFIG   -= app_bundle
 TEMPLATE = app
 
 windows:{
-target.path=/usr/local/bin
+   target.path=/usr/local/bin
 } else {
-target.path=.
+   DEFINES+=PIPGIT_LINUX
+   target.path=.
+}
+
+CONFIG(debug, debug|release){
+   DEFINES+=PIPGIT_DEBUG
 }
 
 INSTALLS=target
