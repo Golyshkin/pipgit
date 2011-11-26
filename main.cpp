@@ -18,14 +18,23 @@ typedef enum
 
 } PIPGIT_STATE_T;
 
-const char * TMP_FILE = "null";
-const char * PIPGIT_FOLDER = "/pipgit";
-const char * PIPGIT_LOG = "pipgit.log";
+typedef struct
+{
+   bool colors;
+
+} PIPGIT_CONFIG_T;
+
+const char *PIPGIT_VER = "0.6.1";
+const char *TMP_FILE = "null";
+const char *PIPGIT_FOLDER = "/pipgit";
+const char *PIPGIT_LOG = "pipgit.log";
 
 char c[256] = { 0 };
 ifstream is;
 bool isProcced = false;
 unsigned int totalChanged = 0;
+PIPGIT_CONFIG_T config = { true };
+
 QString workPath = QDir::tempPath() + PIPGIT_FOLDER;
 QDir workDir( workPath );
 
@@ -47,6 +56,32 @@ int main( int argc, char *argv[] )
       CopyRight( state );
 
       return 0;
+   }
+
+   QFile configFile( QDir::homePath() + "/.pipgit" );
+
+   if ( configFile.exists() == true )
+   {
+      if ( configFile.open(QIODevice::ReadOnly | QIODevice::Text ) )
+      {
+         while (!configFile.atEnd())
+         {
+            QByteArray rawLine = configFile.readLine();
+
+            QString lineStr( rawLine.data() );
+            lineStr = lineStr.simplified();
+
+            QStringList configPair( lineStr.split( "=" ) );
+
+            if ( configPair.count() > 0 )
+            {
+               if ( configPair[0] == "colors" && configPair[1] == "no" )
+               {
+                  config.colors = false;
+               }
+            }
+         }
+      }
    }
 
    // Configuring cout & cerr
@@ -81,8 +116,6 @@ int main( int argc, char *argv[] )
    {
       Usage();
       CopyRight( state );
-
-      return 0;
    }
 
    // To avoid of segmentation fault we need to restore cerr stream pointer
@@ -110,22 +143,36 @@ bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] )
       cmd = QString( "git format-patch -o %3 --add-header=\"-==-\" --numstat --unified=0 --ignore-space-change --no-binary %1...%2 1>%4/%5" ).
                      arg( argv[2] ).arg( arg3 ).arg( workPath ).arg( workPath ).arg( TMP_FILE );
 
-      #ifdef PIPGIT_LINUX
-      cout << endl << QString( "Comparing [\033[1;30m%1\033[00m] with [\033[1;30m%2\033[00m] ... " ).arg( QString( argv[ 2 ] ) ).arg( arg3 ).toStdString().c_str();
-      #else
-      cout << endl << QString( "Comparing [%1] with [%2]" ).arg( QString( argv[ 2 ] ) ).arg( arg3 ).toStdString().c_str();
-      #endif
+      if ( config.colors == true )
+      {
+         #ifdef PIPGIT_LINUX
+         cout << endl << QString( "Comparing [\033[1;30m%1\033[00m] with [\033[1;30m%2\033[00m] ... " ).arg( QString( argv[ 2 ] ) ).arg( arg3 ).toStdString().c_str();
+         #else
+         cout << endl << QString( "Comparing [%1] with [%2]" ).arg( QString( argv[ 2 ] ) ).arg( arg3 ).toStdString().c_str();
+         #endif
+      }
+      else
+      {
+         cout << endl << QString( "Comparing [%1] with [%2]" ).arg( QString( argv[ 2 ] ) ).arg( arg3 ).toStdString().c_str();
+      }
 
       if ( system( cmd.toStdString().c_str() ) != 0 )
       {
          // TODO: Handle error
       }
 
-      #ifdef PIPGIT_LINUX
-      cout << "[ \033[1;32mDONE\033[00m ]" << endl << endl;
-      #else
-      cout << "[ DONE ]" << endl << endl;
-      #endif
+      if ( config.colors == true )
+      {
+         #ifdef PIPGIT_LINUX
+         cout << "[ \033[1;32mDONE\033[00m ]" << endl << endl;
+         #else
+         cout << "[ DONE ]" << endl << endl;
+         #endif
+      }
+      else
+      {
+         cout << "[ DONE ]" << endl << endl;
+      }
    }
    else
    {
@@ -138,11 +185,18 @@ bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] )
          // TODO: Handle error
       }
 
-      #ifdef PIPGIT_LINUX
-      cout << "[ \033[1;32mDONE\033[00m ]" << endl << endl;
-      #else
-      cout << "[ DONE ]" << endl << endl;
-      #endif
+      if ( config.colors == true )
+      {
+         #ifdef PIPGIT_LINUX
+         cout << "[ \033[1;32mDONE\033[00m ]" << endl << endl;
+         #else
+         cout << "[ DONE ]" << endl << endl;
+         #endif
+      }
+      else
+      {
+         cout << "[ DONE ]" << endl << endl;
+      }
    }
 
    #ifdef PIPGIT_DEBUG
@@ -229,15 +283,24 @@ void PrintInfo( PIPGIT_STATE_T aState )
 
       if ( aState == PIPGIT_STATE_INSPECTION )
       {
-         #ifdef PIPGIT_LINUX
-         cout << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[\033[1;32m%1\033[00m]").arg( lastSHAId ).toStdString().c_str()<< endl;
-         cout << setw(20) << "Developer email:" << QString( "[\033[1;33m%1\033[00m]" ).arg( userEmail ).toStdString().c_str() << endl;
-         cout << setw(20) << "Commit Description:" << QString( "[\033[1;32m%1\033[00m]" ).arg( tmpDescriptionSplit[ 1 ] ).toStdString().c_str() << endl << endl;
-         #else
-         cout << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[%1]").arg( lastSHAId ).toStdString().c_str()<< endl;
-         cout << setw(20) << "Developer email:" << QString( "[%1]" ).arg( userEmail ).toStdString().c_str() << endl;
-         cout << setw(20) << "Commit Description:" << QString( "[%1]" ).arg( tmpDescriptionSplit[ 1 ] ).toStdString().c_str() << endl << endl;
-         #endif
+         if ( config.colors == true )
+         {
+            #ifdef PIPGIT_LINUX
+            cout << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[\033[1;32m%1\033[00m]").arg( lastSHAId ).toStdString().c_str()<< endl;
+            cout << setw(20) << "Developer email:" << QString( "[\033[1;33m%1\033[00m]" ).arg( userEmail ).toStdString().c_str() << endl;
+            cout << setw(20) << "Commit Description:" << QString( "[\033[1;32m%1\033[00m]" ).arg( tmpDescriptionSplit[ 1 ] ).toStdString().c_str() << endl << endl;
+            #else
+            cout << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[%1]").arg( lastSHAId ).toStdString().c_str()<< endl;
+            cout << setw(20) << "Developer email:" << QString( "[%1]" ).arg( userEmail ).toStdString().c_str() << endl;
+            cout << setw(20) << "Commit Description:" << QString( "[%1]" ).arg( tmpDescriptionSplit[ 1 ] ).toStdString().c_str() << endl << endl;
+            #endif
+         }
+         else
+         {
+            cout << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[%1]").arg( lastSHAId ).toStdString().c_str()<< endl;
+            cout << setw(20) << "Developer email:" << QString( "[%1]" ).arg( userEmail ).toStdString().c_str() << endl;
+            cout << setw(20) << "Commit Description:" << QString( "[%1]" ).arg( tmpDescriptionSplit[ 1 ] ).toStdString().c_str() << endl << endl;
+         }
 
          cerr << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[%1]").arg( lastSHAId ).toStdString().c_str()<< endl;
          cerr << setw(20) << "Developer email:" << QString( "[%1]" ).arg( userEmail ).toStdString().c_str() << endl;
@@ -246,11 +309,19 @@ void PrintInfo( PIPGIT_STATE_T aState )
          cout << "----------------------------------------------------------------------------------------------" << endl;
          cerr << "----------------------------------------------------------------------------------------------" << endl;
 
-         #ifdef PIPGIT_LINUX
-         cout << "\033[1;32mAdded:\033[00m    |    \033[1;31mDeleted:\033[00m   |   Changed File:" << endl;
-         #else
-         cout << "Added:    |    Deleted:   |   Changed File:" << endl;
-         #endif
+         if ( config.colors == true )
+         {
+            #ifdef PIPGIT_LINUX
+            cout << "\033[1;32mAdded:\033[00m    |    \033[1;31mDeleted:\033[00m   |   Changed File:" << endl;
+            #else
+            cout << "Added:    |    Deleted:   |   Changed File:" << endl;
+            #endif
+         }
+         else
+         {
+            cout << "Added:    |    Deleted:   |   Changed File:" << endl;
+         }
+
          cerr << "Added:    |    Deleted:   |   Changed File:" << endl;
          cout << "----------------------------------------------------------------------------------------------" << endl;
          cerr << "----------------------------------------------------------------------------------------------" << endl;
@@ -304,11 +375,18 @@ void PrintInfo( PIPGIT_STATE_T aState )
 
                if ( aState == PIPGIT_STATE_INSPECTION )
                {
-                  #ifdef PIPGIT_LINUX
-                  cout << " \033[1;32m" << setw(15) << added << "\033[00m" << "\033[1;31m" << setw(15) << deleted << "\033[00m" << std::setw( 15 ) << pStrFileName << endl;
-                  #else
-                  cout << " " << setw(15) << added << setw(15) << deleted << std::setw( 15 ) << pStrFileName << endl;
-                  #endif
+                  if ( config.colors == true )
+                  {
+                     #ifdef PIPGIT_LINUX
+                     cout << " \033[1;32m" << setw(15) << added << "\033[00m" << "\033[1;31m" << setw(15) << deleted << "\033[00m" << std::setw( 15 ) << pStrFileName << endl;
+                     #else
+                     cout << " " << setw(15) << added << setw(15) << deleted << std::setw( 15 ) << pStrFileName << endl;
+                     #endif
+                  }
+                  else
+                  {
+                     cout << " " << setw(15) << added << setw(15) << deleted << std::setw( 15 ) << pStrFileName << endl;
+                  }
 
                   cerr << " " << setw(15) << added << setw(15) << deleted << std::setw( 15 ) << pStrFileName << endl;
                }
@@ -325,13 +403,21 @@ void PrintInfo( PIPGIT_STATE_T aState )
 
       QString branch = GetCurrentBranch();
 
-      #ifdef PIPGIT_LINUX
-      cout << "BRANCH: "  << "[\033[1;32m" << branch.toStdString().c_str()    << "\033[00m]" << endl;
-      cout << "SHAID:  "  << "[\033[1;32m" << lastSHAId.toStdString().c_str() << "\033[00m]" << endl << endl;
-      #else
-      cout << "BRANCH: "  << "[" << branch.toStdString().c_str()    << "]" << endl;
-      cout << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str() << "]" << endl << endl;
-      #endif
+      if ( config.colors == true )
+      {
+         #ifdef PIPGIT_LINUX
+         cout << "BRANCH: "  << "[\033[1;32m" << branch.toStdString().c_str()    << "\033[00m]" << endl;
+         cout << "SHAID:  "  << "[\033[1;32m" << lastSHAId.toStdString().c_str() << "\033[00m]" << endl << endl;
+         #else
+         cout << "BRANCH: "  << "[" << branch.toStdString().c_str()    << "]" << endl;
+         cout << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str() << "]" << endl << endl;
+         #endif
+      }
+      else
+      {
+         cout << "BRANCH: "  << "[" << branch.toStdString().c_str()    << "]" << endl;
+         cout << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str() << "]" << endl << endl;
+      }
 
       cerr << "BRANCH: "  << "[" << branch.toStdString().c_str()    << "]" << endl;
       cerr << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str() << "]" << endl << endl;
@@ -374,11 +460,18 @@ void PrintInfo( PIPGIT_STATE_T aState )
 
    cout << endl;
 
-   #ifdef PIPGIT_LINUX
-   cout << "\033[1;30m----------------------------------------------------------------------------------------------\033[00m" << endl;
-   #else
-   cout << endl << "----------------------------------------------------------------------------------------------" << endl;
-   #endif
+   if ( config.colors == true )
+   {
+      #ifdef PIPGIT_LINUX
+      cout << "\033[1;30m----------------------------------------------------------------------------------------------\033[00m" << endl;
+      #else
+      cout << endl << "----------------------------------------------------------------------------------------------" << endl;
+      #endif
+   }
+   else
+   {
+      cout << endl << "----------------------------------------------------------------------------------------------" << endl;
+   }
 
    cerr << endl << "----------------------------------------------------------------------------------------------" << endl;
 
@@ -392,11 +485,18 @@ void PrintInfo( PIPGIT_STATE_T aState )
    cerr << setw(26) << "Total Inspections:" << inspectionsCount << endl;
    cerr << "----------------------------------------------------------------------------------------------" << endl;
 
-   #ifdef PIPGIT_LINUX
-   cout << "\033[1;30m----------------------------------------------------------------------------------------------\033[00m" << endl;
-   #else
-   cout << "----------------------------------------------------------------------------------------------" << endl;
-   #endif
+   if ( config.colors == true )
+   {
+      #ifdef PIPGIT_LINUX
+      cout << "\033[1;30m----------------------------------------------------------------------------------------------\033[00m" << endl;
+      #else
+      cout << "----------------------------------------------------------------------------------------------" << endl;
+      #endif
+   }
+   else
+   {
+      cout << "----------------------------------------------------------------------------------------------" << endl;
+   }
 }
 
 void CleanUp()
@@ -443,23 +543,31 @@ void Usage()
 
 void CopyRight( PIPGIT_STATE_T aState )
 {
-   #ifdef PIPGIT_LINUX
    cout << "----------------------------------------------------------------------------------------------" << endl;
-   cout << "PIPGIT util - v.0.6 (Christmas Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" << endl;
+   cout << QString( "PIPGIT util - v.%1 (Christmas Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" ).arg( PIPGIT_VER ).toStdString().c_str() << endl;
    cout << "----------------------------------------------------------------------------------------------" << endl;
-   cout << "1. CR Tool Web-Page:         \033[1;33mhttps://bugtracking.teleca.com/Instances/IviCR\033[00m" << endl;
-   cout << "2. Inspection Tool Web-Page: \033[1;33mhttps://bugtracking.teleca.com/Instances/IviInsp\033[00m" << endl;
-   cout << "3. BR Tool Web-Page:         \033[1;33mhttps://bugtracking.teleca.com/Instances/IviBR\033[00m" << endl;
-   cout << "----------------------------------------------------------------------------------------------" << endl;
-   #else
-   cout << "----------------------------------------------------------------------------------------------" << endl;
-   cout << "PIPGIT util - v.0.6 (Christmas Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" << endl;
-   cout << "----------------------------------------------------------------------------------------------" << endl;
-   cout << "1. CR Tool Web-Page:         thttps://bugtracking.teleca.com/Instances/IviCR" << endl;
-   cout << "2. Inspection Tool Web-Page: https://bugtracking.teleca.com/Instances/IviInsp" << endl;
-   cout << "3. BR Tool Web-Page:         thttps://bugtracking.teleca.com/Instances/IviBR" << endl;
-   cout << "----------------------------------------------------------------------------------------------" << endl;
-   #endif
+
+   if ( config.colors == true )
+   {
+      #ifdef PIPGIT_LINUX
+      cout << "1. CR Tool Web-Page:         \033[1;33mhttps://bugtracking.teleca.com/Instances/IviCR\033[00m" << endl;
+      cout << "2. Inspection Tool Web-Page: \033[1;33mhttps://bugtracking.teleca.com/Instances/IviInsp\033[00m" << endl;
+      cout << "3. BR Tool Web-Page:         \033[1;33mhttps://bugtracking.teleca.com/Instances/IviBR\033[00m" << endl;
+      cout << "----------------------------------------------------------------------------------------------" << endl;
+      #else
+      cout << "1. CR Tool Web-Page:         thttps://bugtracking.teleca.com/Instances/IviCR" << endl;
+      cout << "2. Inspection Tool Web-Page: https://bugtracking.teleca.com/Instances/IviInsp" << endl;
+      cout << "3. BR Tool Web-Page:         thttps://bugtracking.teleca.com/Instances/IviBR" << endl;
+      cout << "----------------------------------------------------------------------------------------------" << endl;
+      #endif
+   }
+   else
+   {
+      cout << "1. CR Tool Web-Page:         thttps://bugtracking.teleca.com/Instances/IviCR" << endl;
+      cout << "2. Inspection Tool Web-Page: https://bugtracking.teleca.com/Instances/IviInsp" << endl;
+      cout << "3. BR Tool Web-Page:         thttps://bugtracking.teleca.com/Instances/IviBR" << endl;
+      cout << "----------------------------------------------------------------------------------------------" << endl;
+   }
 
    if ( aState != PIPGIT_STATE_NONE )
    {
