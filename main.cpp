@@ -45,6 +45,7 @@ void ProcessPatches();
 void PrintInfo( PIPGIT_STATE_T aState );
 void CleanUp();
 QString GetCurrentBranch();
+void SetConfig();
 
 int main( int argc, char *argv[] )
 {
@@ -58,32 +59,6 @@ int main( int argc, char *argv[] )
       return 0;
    }
 
-   QFile configFile( QDir::homePath() + "/.pipgit" );
-
-   if ( configFile.exists() == true )
-   {
-      if ( configFile.open(QIODevice::ReadOnly | QIODevice::Text ) )
-      {
-         while (!configFile.atEnd())
-         {
-            QByteArray rawLine = configFile.readLine();
-
-            QString lineStr( rawLine.data() );
-            lineStr = lineStr.simplified();
-
-            QStringList configPair( lineStr.split( "=" ) );
-
-            if ( configPair.count() > 0 )
-            {
-               if ( configPair[0] == "colors" && configPair[1] == "no" )
-               {
-                  config.colors = false;
-               }
-            }
-         }
-      }
-   }
-
    // Configuring cout & cerr
    cout.setf( ios::left, ios::adjustfield );
    cerr.setf( ios::left, ios::adjustfield );
@@ -93,6 +68,8 @@ int main( int argc, char *argv[] )
    streambuf *save_sbuf_cerr = ferr.rdbuf();
    streambuf *old_sbuf_cerr = cerr.rdbuf();
    cerr.rdbuf( save_sbuf_cerr );
+
+   SetConfig();
 
    QString arg1 = argv[1];
 
@@ -123,6 +100,35 @@ int main( int argc, char *argv[] )
    cerr.rdbuf( old_sbuf_cerr );
 
    return 0;
+}
+
+void SetConfig()
+{
+   QFile configFile( QDir::homePath() + "/.pipgit" );
+
+   if ( configFile.exists() == true )
+   {
+      if ( configFile.open(QIODevice::ReadOnly | QIODevice::Text ) )
+      {
+         while (!configFile.atEnd())
+         {
+            QByteArray rawLine = configFile.readLine();
+
+            QString lineStr( rawLine.data() );
+            lineStr = lineStr.simplified();
+
+            QStringList configPair( lineStr.split( "=" ) );
+
+            if ( configPair.count() > 0 )
+            {
+               if ( configPair[0] == "colors" && configPair[1] == "no" )
+               {
+                  config.colors = false;
+               }
+            }
+         }
+      }
+   }
 }
 
 bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] )
