@@ -248,7 +248,7 @@ void PrintInfo( PIPGIT_STATE_T aState )
    QString shId, userName, description;
    QStringList tmpSHASplit, tmpUserSplit, tmpDescriptionSplit;
    QStringList fileNames;
-   QString lastSHAId;
+   QString lastSHAId, lastUserName;
 
    foreach ( QString filename, list )
    {
@@ -278,7 +278,7 @@ void PrintInfo( PIPGIT_STATE_T aState )
          tmpUserSplit = userName.split( " " );
          userEmail = tmpUserSplit[ tmpUserSplit.length() - 1 ];
          userEmail.chop( 1 );
-         userEmail = userEmail.mid( 1 );
+         lastUserName = userEmail = userEmail.mid( 1 );
 
          is.getline( c, 256 );       // skip line
 
@@ -413,20 +413,24 @@ void PrintInfo( PIPGIT_STATE_T aState )
       {
          #ifdef PIPGIT_LINUX
          cout << "BRANCH: "  << "[\033[1;32m" << branch.toStdString().c_str()    << "\033[00m]" << endl;
-         cout << "SHAID:  "  << "[\033[1;32m" << lastSHAId.toStdString().c_str() << "\033[00m]" << endl << endl;
+         cout << "SHAID:  "  << "[\033[1;32m" << lastSHAId.toStdString().c_str() << "\033[00m]" << endl;
+         cout << "USER:   "  << QString( "[\033[1;33m%1\033[00m]" ).arg( lastUserName ).toStdString().c_str() << endl << endl;
          #else
-         cout << "BRANCH: "  << "[" << branch.toStdString().c_str()    << "]" << endl;
-         cout << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str() << "]" << endl << endl;
+         cout << "BRANCH: "  << "[" << branch.toStdString().c_str()       << "]" << endl;
+         cout << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str()    << "]" << endl;
+         cout << "USER:   "  << "[" << lastUserName.toStdString().c_str() << "]" << endl << endl;
          #endif
       }
       else
       {
-         cout << "BRANCH: "  << "[" << branch.toStdString().c_str()    << "]" << endl;
-         cout << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str() << "]" << endl << endl;
+         cout << "BRANCH: "  << "[" << branch.toStdString().c_str()       << "]" << endl;
+         cout << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str()    << "]" << endl;
+         cout << "USER:   "  << "[" << lastUserName.toStdString().c_str() << "]" << endl << endl;
       }
 
-      cerr << "BRANCH: "  << "[" << branch.toStdString().c_str()    << "]" << endl;
-      cerr << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str() << "]" << endl << endl;
+      cerr << "BRANCH: "  << "[" << branch.toStdString().c_str()       << "]" << endl;
+      cerr << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str()    << "]" << endl;
+      cerr << "USER:   "  << "[" << lastUserName.toStdString().c_str() << "]" << endl << endl;
 
       cout << "FILES:" << endl;
       cerr << "FILES:" << endl;
@@ -578,7 +582,7 @@ void CopyRight( PIPGIT_STATE_T aState )
    if ( aState != PIPGIT_STATE_NONE )
    {
       cerr << "----------------------------------------------------------------------------------------------" << endl;
-      cerr << "PIPGIT util - v.0.6 (Christmas Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" << endl;
+      cerr << QString( "PIPGIT util - v.%1 (Christmas Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" ).arg( PIPGIT_VER ).toStdString().c_str() << endl;
       cerr << "----------------------------------------------------------------------------------------------" << endl;
    }
 }
