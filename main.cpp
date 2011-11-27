@@ -24,10 +24,11 @@ typedef struct
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.6.1";
+const char *PIPGIT_VER = "0.6.3";
 const char *TMP_FILE = "null";
 const char *PIPGIT_FOLDER = "/pipgit";
-const char *PIPGIT_LOG = "pipgit.log";
+const char *PIPGIT_INSP_LOG = "pipgit.inspection.log";
+const char *PIPGIT_BR_LOG   = "pipgit.br.log";
 
 char c[256] = { 0 };
 ifstream is;
@@ -64,7 +65,6 @@ int main( int argc, char *argv[] )
    cerr.setf( ios::left, ios::adjustfield );
 
    ofstream	ferr;
-   ferr.open ( PIPGIT_LOG );
    streambuf *save_sbuf_cerr = ferr.rdbuf();
    streambuf *old_sbuf_cerr = cerr.rdbuf();
    cerr.rdbuf( save_sbuf_cerr );
@@ -75,6 +75,8 @@ int main( int argc, char *argv[] )
 
    if ( arg1 == "insp" )
    {
+      ferr.open ( PIPGIT_INSP_LOG );
+
       if ( ExtractPatches( PIPGIT_STATE_INSPECTION, argc, argv ) == true )
       {
          PrintInfo( PIPGIT_STATE_INSPECTION );
@@ -83,6 +85,8 @@ int main( int argc, char *argv[] )
    }
    else if ( arg1 == "br" )
    {
+      ferr.open ( PIPGIT_BR_LOG );
+
       if ( ExtractPatches( PIPGIT_STATE_BR, argc, argv ) == true )
       {
          PrintInfo( PIPGIT_STATE_BR );
@@ -542,11 +546,11 @@ void Usage()
    cout << "Parameter 2. (SHA ID)  - Compare changes between SHA1 & SHA2" << endl;
    cout << "Parameter 2. -1..-n   - Get last <n> commits based on current checked out branch" << endl;
 
-   cout << endl << "Example:" << endl;
-   cout << "\'pipgit 7deac3c8436afa65a64f5567869f6b9d2a39a33e 7deac3c8436afa6535432442543445\' - Will calculate changes between SHA1 & SHA2" << endl;;
-   cout << "\'pipgit 7deac3c8436afa65a64f5567869f6b9d2a39a33e\' - Will calculate selected SHA ID changes with last commit" << endl;
-   cout << "\'pipgit -1\' - Will calculate changes with last commit" << endl;
-   cout << "\'pipgit -3\' - Will calculate changes with 3 last commits" << endl << endl;
+   cout << endl << "Examples:" << endl;
+   cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e 7deac3c8436afa6535432442543445\' - Will calculate changes between SHA1 & SHA2" << endl;;
+   cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e\' - Will calculate selected SHA ID changes with last commit" << endl;
+   cout << "\'pipgit insp -1\' - Will calculate changes with last commit" << endl;
+   cout << "\'pipgit insp -3\' - Will calculate changes with 3 last commits" << endl << endl;
 }
 
 void CopyRight( PIPGIT_STATE_T aState )
