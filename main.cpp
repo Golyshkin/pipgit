@@ -536,17 +536,15 @@ void PrintInfoBR()
 void Usage()
 {
    cout << "===========================================================================" << endl;
-   cout << "Usage:" << " pipgit <insp|br> < <SHA ID1> <SHA ID2> | -1..-n>" << endl;
+   cout << "Usage:" << " pipgit <insp|br> <SHA ID1 SHA ID2> | <-1..-n>" << endl;
    cout << "===========================================================================" << endl;
-   cout << "Parameter   1. (insp|br) - Switch output information to Inspection or BR" << endl;
-   cout << "Parameter 1,2. (SHA ID)  - Compare changes between SHA1 & SHA2" << endl;
-   cout << "Parameter   2.  -1..-n   - Get last <n> commits based on current checked out branch" << endl;
+   cout << "Parameter 1. (insp|br) - Switch output information to Inspection or BR" << endl;
+   cout << "Parameter 2. (SHA ID)  - Compare changes between SHA1 & SHA2" << endl;
+   cout << "Parameter 2. -1..-n   - Get last <n> commits based on current checked out branch" << endl;
 
    cout << endl << "Example:" << endl;
    cout << "\'pipgit 7deac3c8436afa65a64f5567869f6b9d2a39a33e 7deac3c8436afa6535432442543445\' - Will calculate changes between SHA1 & SHA2" << endl;;
    cout << "\'pipgit 7deac3c8436afa65a64f5567869f6b9d2a39a33e\' - Will calculate selected SHA ID changes with last commit" << endl;
-   cout << "\'pipgit 7deac3c8436afa65a64f5567869f6b9d2a39a33e -1\' - Will calculate selected SHA ID changes only" << endl;
-   cout << "\'pipgit 7deac3c8436afa65a64f5567869f6b9d2a39a33e -3\' - Will calculate selected SHA ID changes with 3 previous commits" << endl;
    cout << "\'pipgit -1\' - Will calculate changes with last commit" << endl;
    cout << "\'pipgit -3\' - Will calculate changes with 3 last commits" << endl << endl;
 }
