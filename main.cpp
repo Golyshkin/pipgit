@@ -20,11 +20,20 @@ typedef enum
 
 typedef struct
 {
+   QString fileName;
+   unsigned int added;
+   unsigned int deleted;
+
+} PIPGIT_ITEM_T;
+
+typedef struct
+{
    bool colors;
+   bool detailedStat;
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.6.3";
+const char *PIPGIT_VER = "0.6.4";
 const char *TMP_FILE = "null";
 const char *PIPGIT_FOLDER = "/pipgit";
 const char *PIPGIT_INSP_LOG = "pipgit.inspection.log";
@@ -34,7 +43,8 @@ char c[256] = { 0 };
 ifstream is;
 bool isProcced = false;
 unsigned int totalChanged = 0;
-PIPGIT_CONFIG_T config = { true };
+PIPGIT_CONFIG_T config = { true, true };
+QList< PIPGIT_ITEM_T > gItemslist;
 
 QString workPath = QDir::tempPath() + PIPGIT_FOLDER;
 QDir workDir( workPath );
@@ -42,20 +52,22 @@ QDir workDir( workPath );
 void Usage();
 void CopyRight( PIPGIT_STATE_T aState );
 bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] );
-void ProcessPatches();
 void PrintInfo( PIPGIT_STATE_T aState );
 void CleanUp();
 QString GetCurrentBranch();
-void SetConfig();
+void SetConfig( int &argc, char *argv[] );
+QList< PIPGIT_ITEM_T > GetDiff( QString aSHA1, QString aSHA2 = QString() );
 
 int main( int argc, char *argv[] )
 {
    PIPGIT_STATE_T state = PIPGIT_STATE_NONE;
 
+   SetConfig( argc, argv );
+
    if ( argc < 2 )
    {
-      Usage();
       CopyRight( state );
+      Usage();
 
       return 0;
    }
@@ -69,8 +81,6 @@ int main( int argc, char *argv[] )
    streambuf *old_sbuf_cerr = cerr.rdbuf();
    cerr.rdbuf( save_sbuf_cerr );
 
-   SetConfig();
-
    QString arg1 = argv[1];
 
    if ( arg1 == "insp" )
@@ -82,6 +92,10 @@ int main( int argc, char *argv[] )
          PrintInfo( PIPGIT_STATE_INSPECTION );
          CleanUp();
       }
+      else
+      {
+         Usage();
+      }
    }
    else if ( arg1 == "br" )
    {
@@ -92,11 +106,15 @@ int main( int argc, char *argv[] )
          PrintInfo( PIPGIT_STATE_BR );
          CleanUp();
       }
+      else
+      {
+         Usage();
+      }
    }
    else
    {
-      Usage();
       CopyRight( state );
+      Usage();
    }
 
    // To avoid of segmentation fault we need to restore cerr stream pointer
@@ -106,8 +124,9 @@ int main( int argc, char *argv[] )
    return 0;
 }
 
-void SetConfig()
+void SetConfig( int &aArgc, char *aArgv[] )
 {
+   // Checking .pipgit
    QFile configFile( QDir::homePath() + "/.pipgit" );
 
    if ( configFile.exists() == true )
@@ -123,13 +142,39 @@ void SetConfig()
 
             QStringList configPair( lineStr.split( "=" ) );
 
-            if ( configPair.count() > 0 )
+            if ( configPair.count() == 2 )
             {
-               if ( configPair[0] == "colors" && configPair[1] == "no" )
+               if ( configPair[0].toLower() == "colors" && configPair[1].toLower() == "no" )
                {
                   config.colors = false;
                }
+
+               if ( configPair[0].toLower() == "detailed" && configPair[1].toLower() == "no" )
+               {
+                  config.detailedStat = false;
+               }
             }
+         }
+      }
+   }
+
+   // Checking ARGV overides .pipgit
+   for ( int index = 0; index < aArgc; index++ )
+   {
+      QString argString = aArgv[ index ];
+      QStringList curArg = argString.split( "=" );
+
+      if ( curArg.count() == 2 )
+      {
+         --aArgc;
+
+         if ( curArg[0].toLower() == "--detailed" && curArg[1].toLower() == "yes" )
+         {
+            config.detailedStat = true;
+         }
+         else
+         {
+            config.detailedStat = false;
          }
       }
    }
@@ -148,8 +193,10 @@ bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] )
 
    QString cmd, arg3 = (argc == 4) ? argv[3] : "";
 
-   if ( arg3.length() > 0 )
+   if ( arg3.length() > 5 )
    {
+      gItemslist = GetDiff( argv[2], argv[3] );
+
       cmd = QString( "git format-patch -o %3 --add-header=\"-==-\" --numstat --unified=0 --ignore-space-change --no-binary %1...%2 1>%4/%5" ).
                      arg( argv[2] ).arg( arg3 ).arg( workPath ).arg( workPath ).arg( TMP_FILE );
 
@@ -186,9 +233,27 @@ bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] )
    }
    else
    {
+      gItemslist = GetDiff( argv[2] );
+
       cmd = QString( "git format-patch -o %2 --add-header=\"-==-\" --numstat --unified=0 --ignore-space-change --no-binary %1 1>%3/%4" ).
                       arg( argv[2] ).arg( workPath ).arg( workPath ).arg( TMP_FILE );
-      cout << endl << QString( "Extracting GIT changes for last [%1] commits .......... " ).arg( abs( QString( argv[2] ).toInt() ) ).toStdString().c_str();
+
+      if ( QString( argv[2] ).toInt() == -1 )
+      {
+         cout << endl << "Comparing last commit ... ";
+      }
+      else if ( strlen( argv[2] ) > 5 )
+      {
+#ifdef PIPGIT_LINUX
+         cout << endl << QString( "Comparing [\033[1;30m%1\033[00m] with latest commit ... " ).arg( QString( argv[ 2 ] ) ).toStdString().c_str();
+#else
+         cout << endl << QString( "Comparing [%1] with latest commit ... " ).arg( QString( argv[ 2 ] ) ).toStdString().c_str();
+#endif
+      }
+      else
+      {
+         return false;
+      }
 
       if ( system( cmd.toStdString().c_str() ) != 0 )
       {
@@ -216,8 +281,44 @@ bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] )
    return true;
 }
 
-void ProcessPatches()
+QList< PIPGIT_ITEM_T > GetDiff( QString aSHA1, QString aSHA2 )
 {
+   QList< PIPGIT_ITEM_T > ItemsList;
+
+   QProcess proc;
+
+   proc.start( QString( "git diff --numstat %1 %2" ).arg( aSHA1 ).arg( aSHA2 ), QIODevice::ReadOnly );
+   // Show process output
+   proc.waitForReadyRead();
+
+   QString tmpStr( proc.readAllStandardOutput().data() );
+
+   proc.close();
+
+   QStringList tmpStrList;
+
+   tmpStrList = tmpStr.split( "\n" );
+
+   if ( tmpStrList.count() > 0 )
+   {
+      foreach ( QString curSting, tmpStrList )
+      {
+         QStringList curItemList = curSting.split( "\t" );
+
+         if ( curItemList.count() == 3 )
+         {
+            PIPGIT_ITEM_T itemInfo;
+
+            itemInfo.added    = curItemList[0].simplified().toInt();
+            itemInfo.deleted  = curItemList[1].simplified().toInt();
+            itemInfo.fileName = curItemList[2].simplified();
+
+            ItemsList.append( itemInfo );
+         }
+      }
+   }
+
+   return ItemsList;
 }
 
 QString GetCurrentBranch()
@@ -252,7 +353,8 @@ void PrintInfo( PIPGIT_STATE_T aState )
    QString shId, userName, description;
    QStringList tmpSHASplit, tmpUserSplit, tmpDescriptionSplit;
    QStringList fileNames;
-   QString lastSHAId, lastUserName;
+   QString lastSHAId, lastUserName, lastCommitDesc;
+   unsigned int commitsNum = 0;
 
    foreach ( QString filename, list )
    {
@@ -289,32 +391,36 @@ void PrintInfo( PIPGIT_STATE_T aState )
          is.getline( c, 256 );       // get description
          description.append( &c[0] );
          tmpDescriptionSplit = description.split( "] " );
+         lastCommitDesc = tmpDescriptionSplit[ 1 ];
       }
 
       if ( aState == PIPGIT_STATE_INSPECTION )
       {
+         cout << endl << setw(20) << "Commit No:" << "[" << ++commitsNum << "]";
+         cerr << endl << setw(20) << "Commit No:" << "[" << commitsNum << "]";
+
          if ( config.colors == true )
          {
             #ifdef PIPGIT_LINUX
             cout << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[\033[1;32m%1\033[00m]").arg( lastSHAId ).toStdString().c_str()<< endl;
-            cout << setw(20) << "Developer email:" << QString( "[\033[1;33m%1\033[00m]" ).arg( userEmail ).toStdString().c_str() << endl;
-            cout << setw(20) << "Commit Description:" << QString( "[\033[1;32m%1\033[00m]" ).arg( tmpDescriptionSplit[ 1 ] ).toStdString().c_str() << endl << endl;
+            cout << setw(20) << "Developer email:" << QString( "[\033[1;33m%1\033[00m]" ).arg( lastUserName ).toStdString().c_str() << endl;
+            cout << setw(20) << "Commit Description:" << QString( "[\033[1;32m%1\033[00m]" ).arg( lastCommitDesc ).toStdString().c_str() << endl << endl;
             #else
             cout << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[%1]").arg( lastSHAId ).toStdString().c_str()<< endl;
-            cout << setw(20) << "Developer email:" << QString( "[%1]" ).arg( userEmail ).toStdString().c_str() << endl;
-            cout << setw(20) << "Commit Description:" << QString( "[%1]" ).arg( tmpDescriptionSplit[ 1 ] ).toStdString().c_str() << endl << endl;
+            cout << setw(20) << "Developer email:" << QString( "[%1]" ).arg( lastUserName ).toStdString().c_str() << endl;
+            cout << setw(20) << "Commit Description:" << QString( "[%1]" ).arg( lastCommitDesc ).toStdString().c_str() << endl << endl;
             #endif
          }
          else
          {
             cout << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[%1]").arg( lastSHAId ).toStdString().c_str()<< endl;
-            cout << setw(20) << "Developer email:" << QString( "[%1]" ).arg( userEmail ).toStdString().c_str() << endl;
-            cout << setw(20) << "Commit Description:" << QString( "[%1]" ).arg( tmpDescriptionSplit[ 1 ] ).toStdString().c_str() << endl << endl;
+            cout << setw(20) << "Developer email:" << QString( "[%1]" ).arg( lastUserName ).toStdString().c_str() << endl;
+            cout << setw(20) << "Commit Description:" << QString( "[%1]" ).arg( lastCommitDesc ).toStdString().c_str() << endl << endl;
          }
 
          cerr << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[%1]").arg( lastSHAId ).toStdString().c_str()<< endl;
-         cerr << setw(20) << "Developer email:" << QString( "[%1]" ).arg( userEmail ).toStdString().c_str() << endl;
-         cerr << setw(20) << "Commit Description:" << QString( "[%1]" ).arg( tmpDescriptionSplit[ 1 ] ).toStdString().c_str() << endl << endl;
+         cerr << setw(20) << "Developer email:" << QString( "[%1]" ).arg( lastUserName ).toStdString().c_str() << endl;
+         cerr << setw(20) << "Commit Description:" << QString( "[%1]" ).arg( lastCommitDesc ).toStdString().c_str() << endl << endl;
 
          cout << "----------------------------------------------------------------------------------------------" << endl;
          cerr << "----------------------------------------------------------------------------------------------" << endl;
@@ -348,7 +454,8 @@ void PrintInfo( PIPGIT_STATE_T aState )
                isProcced = true;
                continue;
             }
-            else if( strstr( c, "diff --git" ) && isProcced)
+            // else if( strstr( c, "diff --git" ) && isProcced)
+            else if( strstr( c, "--" ) && isProcced)
             {
                isProcced = false;
 
@@ -405,6 +512,50 @@ void PrintInfo( PIPGIT_STATE_T aState )
       }
 
       is.close();
+   }
+
+   if ( aState == PIPGIT_STATE_INSPECTION && gItemslist.count() > 0 )
+   {
+      cout << endl << "SUMMARY INFORMATION FOR [" << commitsNum << "] COMMIT(s):" << endl;
+      cerr << endl << "SUMMARY INFORMATION FOR [" << commitsNum << "] COMMIT(s):" << endl;
+
+      cout << "----------------------------------------------------------------------------------------------" << endl;
+      cerr << "----------------------------------------------------------------------------------------------" << endl;
+
+      if ( config.colors == true )
+      {
+#ifdef PIPGIT_LINUX
+         cout << "\033[1;32mAdded:\033[00m    |    \033[1;31mDeleted:\033[00m   |   Changed File:" << endl;
+#else
+         cout << "Added:    |    Deleted:   |   Changed File:" << endl;
+#endif
+      }
+      else
+      {
+         cout << "Added:    |    Deleted:   |   Changed File:" << endl;
+      }
+
+      cerr << "Added:    |    Deleted:   |   Changed File:" << endl;
+      cout << "----------------------------------------------------------------------------------------------" << endl;
+      cerr << "----------------------------------------------------------------------------------------------" << endl;
+
+      foreach ( PIPGIT_ITEM_T item, gItemslist )
+      {
+         if ( config.colors == true )
+         {
+            #ifdef PIPGIT_LINUX
+            cout << " \033[1;32m" << setw(15) << item.added << "\033[00m" << "\033[1;31m" << setw(15) << item.deleted << "\033[00m" << std::setw( 15 ) << item.fileName.toStdString().c_str() << endl;
+            #else
+            cout << " " << setw(15) << item.added << setw(15) << item.deleted << std::setw( 15 ) << item.fileName.toStdString().c_str() << endl;
+            #endif
+         }
+         else
+         {
+            cout << " " << setw(15) << item.added << setw(15) << item.deleted << std::setw( 15 ) << item.fileName.toStdString().c_str() << endl;
+         }
+
+         cerr << " " << setw(15) << item.added << setw(15) << item.deleted << std::setw( 15 ) << item.fileName.toStdString().c_str() << endl;
+      }
    }
 
    if ( aState == PIPGIT_STATE_BR )
@@ -540,17 +691,25 @@ void PrintInfoBR()
 void Usage()
 {
    cout << "===========================================================================" << endl;
-   cout << "Usage:" << " pipgit <insp|br> <SHA ID1 SHA ID2> | <-1..-n>" << endl;
+   cout << "Usage:" << " pipgit <insp|br> <SHA ID1 SHA ID2> | -1" << endl;
    cout << "===========================================================================" << endl;
    cout << "Parameter 1. (insp|br) - Switch output information to Inspection or BR" << endl;
    cout << "Parameter 2. (SHA ID)  - Compare changes between SHA1 & SHA2" << endl;
-   cout << "Parameter 2. -1..-n   - Get last <n> commits based on current checked out branch" << endl;
+   cout << "Parameter 2. -1        - Show last commit changes" << endl;
 
    cout << endl << "Examples:" << endl;
-   cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e 7deac3c8436afa6535432442543445\' - Will calculate changes between SHA1 & SHA2" << endl;;
-   cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e\' - Will calculate selected SHA ID changes with last commit" << endl;
-   cout << "\'pipgit insp -1\' - Will calculate changes with last commit" << endl;
-   cout << "\'pipgit insp -3\' - Will calculate changes with 3 last commits" << endl << endl;
+   cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e 7deac3c8436afa6535432442543445\' - Calculates changes between SHA1 & SHA2" << endl;
+   cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e\' - Calculates changes between selected SHA ID & latest commit" << endl;
+   cout << "\'pipgit insp -1\' - Show last commit changes" << endl << endl;
+
+   if ( config.colors == true )
+   {
+      cout << "\033[01;31mNote: Order of parameters SHA1 & SHA2 make sence for \'git diff\', so, be a careful during typing!\033[00m" << endl << endl;
+   }
+   else
+   {
+      cout << "Note: Order of parameters SHA1 & SHA2 make sence for \'git diff\', so, be a careful during typing!" << endl << endl;
+   }
 }
 
 void CopyRight( PIPGIT_STATE_T aState )
@@ -567,17 +726,17 @@ void CopyRight( PIPGIT_STATE_T aState )
       cout << "3. BR Tool Web-Page:         \033[1;33mhttps://bugtracking.teleca.com/Instances/IviBR\033[00m" << endl;
       cout << "----------------------------------------------------------------------------------------------" << endl;
       #else
-      cout << "1. CR Tool Web-Page:         thttps://bugtracking.teleca.com/Instances/IviCR" << endl;
+      cout << "1. CR Tool Web-Page:         https://bugtracking.teleca.com/Instances/IviCR" << endl;
       cout << "2. Inspection Tool Web-Page: https://bugtracking.teleca.com/Instances/IviInsp" << endl;
-      cout << "3. BR Tool Web-Page:         thttps://bugtracking.teleca.com/Instances/IviBR" << endl;
+      cout << "3. BR Tool Web-Page:         https://bugtracking.teleca.com/Instances/IviBR" << endl;
       cout << "----------------------------------------------------------------------------------------------" << endl;
       #endif
    }
    else
    {
-      cout << "1. CR Tool Web-Page:         thttps://bugtracking.teleca.com/Instances/IviCR" << endl;
+      cout << "1. CR Tool Web-Page:         https://bugtracking.teleca.com/Instances/IviCR" << endl;
       cout << "2. Inspection Tool Web-Page: https://bugtracking.teleca.com/Instances/IviInsp" << endl;
-      cout << "3. BR Tool Web-Page:         thttps://bugtracking.teleca.com/Instances/IviBR" << endl;
+      cout << "3. BR Tool Web-Page:         https://bugtracking.teleca.com/Instances/IviBR" << endl;
       cout << "----------------------------------------------------------------------------------------------" << endl;
    }
 
