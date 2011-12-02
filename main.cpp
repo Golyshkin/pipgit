@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iomanip>
 #include <QProcess>
+#include <QDebug>
 
 using namespace std;
 
@@ -21,10 +22,24 @@ typedef enum
 typedef struct
 {
    QString fileName;
+   QString changeType;
    unsigned int added;
    unsigned int deleted;
 
-} PIPGIT_ITEM_T;
+} PIPGIT_FILE_ITEM_T;
+
+typedef struct
+{
+   int commitNumber;
+   QString shaid;
+   QString autorName;
+   QString autorEmail;
+   QString commitDate;
+   QString commitDesc;
+
+   QList< PIPGIT_FILE_ITEM_T > files;
+
+} PIPGIT_COMMIT_ITEM_T;
 
 typedef struct
 {
@@ -33,8 +48,9 @@ typedef struct
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.6.4";
-const char *TMP_FILE = "null";
+const char *PIPGIT_VER = "0.6.5";
+const int BUF_STR_SIZE = 255;
+
 const char *PIPGIT_FOLDER = "/pipgit";
 const char *PIPGIT_INSP_LOG = "pipgit.inspection.log";
 const char *PIPGIT_BR_LOG   = "pipgit.br.log";
@@ -44,19 +60,34 @@ ifstream is;
 bool isProcced = false;
 unsigned int totalChanged = 0;
 PIPGIT_CONFIG_T config = { true, true };
-QList< PIPGIT_ITEM_T > gItemslist;
+QList< PIPGIT_COMMIT_ITEM_T > gCommitList;
+QList< PIPGIT_FILE_ITEM_T > gSummaryList;
+PIPGIT_COMMIT_ITEM_T gSummaryBR;
 
 QString workPath = QDir::tempPath() + PIPGIT_FOLDER;
 QDir workDir( workPath );
 
-void Usage();
-void CopyRight( PIPGIT_STATE_T aState );
+//---------------
 bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] );
 void PrintInfo( PIPGIT_STATE_T aState );
+//---------------
+
+void Usage();
+void CopyRight( PIPGIT_STATE_T aState );
 void CleanUp();
 QString GetCurrentBranch();
+bool Configure();
 void SetConfig( int &argc, char *argv[] );
-QList< PIPGIT_ITEM_T > GetDiff( QString aSHA1, QString aSHA2 = QString() );
+void GetTotalDiff( QString aSHA1, QString aSHA2 = QString(), PIPGIT_STATE_T aType = PIPGIT_STATE_INSPECTION );
+void GetDetailedDiff( QString aSHA1, QString aSHA2 = QString() );
+void GetInspectionDetails();
+void GetBRDetailes();
+
+void PrintString( QString aStr1, QString aStr2, int aColor, bool aPrintToLog, int aWith = 20 );
+void PrintFilesHeader();
+void PrintFiles( int aAdded, int aDeleted, QString aFileName );
+void PrintInspection();
+void PrintBR();
 
 int main( int argc, char *argv[] )
 {
@@ -82,29 +113,29 @@ int main( int argc, char *argv[] )
    cerr.rdbuf( save_sbuf_cerr );
 
    QString arg1 = argv[1];
+   QString arg3 = (argc == 4) ? argv[3] : "";
 
    if ( arg1 == "insp" )
    {
       ferr.open ( PIPGIT_INSP_LOG );
 
-      if ( ExtractPatches( PIPGIT_STATE_INSPECTION, argc, argv ) == true )
+      if ( Configure() == true )
       {
-         PrintInfo( PIPGIT_STATE_INSPECTION );
-         CleanUp();
-      }
-      else
-      {
-         Usage();
+         GetDetailedDiff( argv[2], argv[3] );
+         GetTotalDiff( argv[2], argv[3] );
+         GetInspectionDetails();
+         PrintInspection();
       }
    }
    else if ( arg1 == "br" )
    {
       ferr.open ( PIPGIT_BR_LOG );
 
-      if ( ExtractPatches( PIPGIT_STATE_BR, argc, argv ) == true )
+      if ( Configure() == true )
       {
-         PrintInfo( PIPGIT_STATE_BR );
-         CleanUp();
+         GetDetailedDiff( argv[2], argv[3] );
+         GetTotalDiff( argv[2], argv[3], PIPGIT_STATE_BR );
+         PrintBR();
       }
       else
       {
@@ -121,10 +152,13 @@ int main( int argc, char *argv[] )
    ferr.close();
    cerr.rdbuf( old_sbuf_cerr );
 
+   CleanUp();
+
    return 0;
 }
 
-void SetConfig( int &aArgc, char *aArgv[] )
+void
+SetConfig( int &aArgc, char *aArgv[] )
 {
    // Checking .pipgit
    QFile configFile( QDir::homePath() + "/.pipgit" );
@@ -180,7 +214,9 @@ void SetConfig( int &aArgc, char *aArgv[] )
    }
 }
 
-bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] )
+
+bool
+ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] )
 {
    CopyRight( aState );
 
@@ -191,15 +227,13 @@ bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] )
       return false;
    }
 
+   return true;
+
+
    QString cmd, arg3 = (argc == 4) ? argv[3] : "";
 
    if ( arg3.length() > 5 )
    {
-      gItemslist = GetDiff( argv[2], argv[3] );
-
-      cmd = QString( "git format-patch -o %3 --add-header=\"-==-\" --numstat --unified=0 --ignore-space-change --no-binary %1...%2 1>%4/%5" ).
-                     arg( argv[2] ).arg( arg3 ).arg( workPath ).arg( workPath ).arg( TMP_FILE );
-
       if ( config.colors == true )
       {
          #ifdef PIPGIT_LINUX
@@ -233,11 +267,6 @@ bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] )
    }
    else
    {
-      gItemslist = GetDiff( argv[2] );
-
-      cmd = QString( "git format-patch -o %2 --add-header=\"-==-\" --numstat --unified=0 --ignore-space-change --no-binary %1 1>%3/%4" ).
-                      arg( argv[2] ).arg( workPath ).arg( workPath ).arg( TMP_FILE );
-
       if ( QString( argv[2] ).toInt() == -1 )
       {
          cout << endl << "Comparing last commit ... ";
@@ -281,13 +310,271 @@ bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] )
    return true;
 }
 
-QList< PIPGIT_ITEM_T > GetDiff( QString aSHA1, QString aSHA2 )
+bool
+Configure()
 {
-   QList< PIPGIT_ITEM_T > ItemsList;
+   if ( !workDir.exists() && workDir.mkdir( workPath ) == false )
+   {
+      cout << endl << QString( "Error: Couldn't create [%1] directory..." ).arg( workPath ).toStdString().c_str();
 
+      return false;
+   }
+
+   return true;
+}
+
+void PrintInspection()
+{
+   foreach ( PIPGIT_COMMIT_ITEM_T commit, gCommitList )
+   {
+      PrintString( "Commit No:", QString( "[%1]" ).arg( commit.commitNumber ), 32, true );
+      PrintString( "GIT Commit SHA ID:", commit.shaid, 32, true );
+      PrintString( "Developer Name:", commit.autorName, 33, true );
+      PrintString( "Developer E-mail:", commit.autorEmail, 33, true );
+      PrintString( "Commit Date:", commit.commitDate, 32, true );
+      PrintString( "Commit Description:", commit.commitDesc, 32, true );
+
+      cout << endl;
+      cerr << endl;;
+
+      PrintFilesHeader();
+
+      foreach ( PIPGIT_FILE_ITEM_T file, commit.files )
+      {
+         PrintFiles( file.added, file.deleted, file.fileName );
+      }
+
+      cout << endl;
+      cerr << endl;;
+   }
+
+   cout << "TOTAL CHANGES FOR [" << gSummaryList.count() << "] COMMIT(s):" << endl;
+   cerr << "TOTAL CHANGES FOR [" << gSummaryList.count() << "] COMMIT(s):" << endl;
+
+   PrintFilesHeader();
+
+   foreach ( PIPGIT_FILE_ITEM_T item, gSummaryList )
+   {
+      PrintFiles( item.added, item.deleted, item.fileName );
+   }
+}
+
+void PrintBR()
+{
+   PrintString( "GIT Commit SHA ID:", gCommitList[0].shaid, 32, true );
+   PrintString( "Developer Name:", gCommitList[0].autorName, 33, true );
+   PrintString( "Developer E-mail:", gCommitList[0].autorEmail, 33, true );
+   PrintString( "Commit Date:", gCommitList[0].commitDate, 32, true );
+   PrintString( "Commit Description:", gCommitList[0].commitDesc, 32, true );
+   PrintString( "Branch:", QString( "[<color>%1</color>]" ).arg( GetCurrentBranch() ), 32, true );
+
+   cout << endl;
+   cerr << endl;;
+
+   cout << "==============================================================================================" << endl;
+   cerr << "==============================================================================================" << endl;
+
+   cout << "FILES:" << endl;
+   cerr << "FILES:" << endl;
+
+   cout << "==============================================================================================" << endl;
+   cerr << "==============================================================================================" << endl;
+
+   foreach ( PIPGIT_FILE_ITEM_T item, gSummaryBR.files )
+   {
+      PrintString( item.changeType, item.fileName, 32, true, 3 );
+   }
+
+   cout << "----------------------------------------------------------------------------------------------" << endl;
+   cerr << "----------------------------------------------------------------------------------------------" << endl;
+
+   cout << endl << "TESTED: [Yes/No]" << endl << "COMMENT:" << endl;
+   cerr << endl << "TESTED: [Yes/No]" << endl << "COMMENT:" << endl;
+}
+
+void
+PrintString( QString aStr1, QString aStr2, int aColor, bool aPrintToLog, int aWith )
+{
+   if ( aPrintToLog )
+   {
+      QString str( aStr2 );
+
+      str.replace( "<color>",  "" );
+      str.replace( "</color>", "" );
+
+      cerr << setw( aWith ) << aStr1.toStdString().c_str() << str.toStdString().c_str() << endl;
+   }
+
+   if ( config.colors == true )
+   {
+#ifdef PIPGIT_LINUX
+      aStr2.replace( "<color>", QString( "\033[1;%1m" ).arg( aColor ) );
+      aStr2.replace( "</color>", "\033[00m" );
+#endif
+   }
+
+   aStr2.replace( "<color>", ""  );
+   aStr2.replace( "</color>", "" );
+
+   cout << setw( aWith ) << aStr1.toStdString().c_str() << aStr2.toStdString().c_str() << endl;
+}
+
+void
+PrintFilesHeader()
+{
+   PrintString( "----------------------------------------------------------------------------------------------", "",  0, true );
+
+   if ( config.colors == true )
+   {
+#ifdef PIPGIT_LINUX
+      cout << "\033[1;32mAdded:\033[00m    |    \033[1;31mDeleted:\033[00m   |   Changed File:" << endl;
+#else
+      cout << "Added:    |    Deleted:   |   Changed File:" << endl;
+#endif
+   }
+   else
+   {
+      cout << "Added:    |    Deleted:   |   Changed File:" << endl;
+   }
+
+   cerr << "Added:    |    Deleted:   |   Changed File:" << endl;
+
+   PrintString( "----------------------------------------------------------------------------------------------", "",  0, true );
+}
+
+void
+PrintFiles( int aAdded, int aDeleted, QString aFileName )
+{
+   if ( config.colors == true )
+   {
+      #ifdef PIPGIT_LINUX
+      cout << " \033[1;32m" << setw(15) << aAdded << "\033[00m" << "\033[1;31m" << setw(15) << aDeleted << "\033[00m" << std::setw( 15 ) << aFileName.toStdString().c_str() << endl;
+      #else
+      cout << " " << setw(15) << aAdded << setw(15) << aDeleted<< std::setw( 15 ) << aFileName.toStdString().c_str() << endl;
+      #endif
+   }
+   else
+   {
+      cout << " " << setw(15) << aAdded << setw(15) << aDeleted<< std::setw( 15 ) << aFileName.toStdString().c_str() << endl;
+   }
+
+   cerr << " " << setw(15) << aAdded << setw(15) << aDeleted<< std::setw( 15 ) << aFileName.toStdString().c_str() << endl;
+}
+
+void
+GetDetailedDiff( QString aSHA1, QString aSHA2 )
+{
    QProcess proc;
+   QString fileToSave = workPath + "/detailed_diff.log";
+   char tmpBuf[ BUF_STR_SIZE + 1 ] = { 0 };
+   int commitCount = 0;
+   PIPGIT_COMMIT_ITEM_T commitItem;
 
-   proc.start( QString( "git diff --numstat %1 %2" ).arg( aSHA1 ).arg( aSHA2 ), QIODevice::ReadOnly );
+   QString cmd = QString( "git log --numstat --pretty=format:\"Commit No:%nSHAID:%H%nAutor Name:%an%nAutor E-mail:%ae%nCommit Date:%aD%nDescription:%s%n\" %1...%2 >%3/detailed_diff.log" ).arg( aSHA1 ).arg( aSHA2 ).arg( workPath );
+
+   #ifdef PIPGIT_DEBUG
+   cout << cmd.toStdString().c_str() << endl;
+   #endif
+
+   system( cmd.toStdString().c_str() );
+
+   is.open( fileToSave.toStdString().c_str() );
+
+   while ( is.good() )     // loop while extraction from file is possible
+   {
+      is.getline( &tmpBuf[0], BUF_STR_SIZE );
+
+      QString curLine( &tmpBuf[0] );
+
+      if ( curLine.contains( "Commit No" ) )
+      {
+         ++commitCount;
+
+         if ( commitItem.files.count() > 0 )
+         {
+            gCommitList.append( commitItem );
+            commitItem.files.clear();
+         }
+
+         commitItem.commitNumber = commitCount;
+      }
+      else if ( curLine.contains( "SHAID" ) )
+      {
+         QStringList values( curLine.split( ":" ) );
+
+         commitItem.shaid = QString( "[<color>%1</color>]" ).arg( values[ 1 ] );
+      }
+      else if ( curLine.contains( "Autor Name" ) )
+      {
+         QStringList values( curLine.split( ":" ) );
+
+         commitItem.autorName = QString( "[<color>%1</color>]" ).arg( values[ 1 ] );
+      }
+      else if ( curLine.contains( "Autor E-mail" ) )
+      {
+         QStringList values( curLine.split( ":" ) );
+
+         commitItem.autorEmail = QString( "[<color>%1</color>]" ).arg( values[ 1 ] );
+      }
+      else if ( curLine.contains( "Commit Date" ) )
+      {
+         QStringList values( curLine.split( ":" ) );
+
+         commitItem.commitDate = QString( "[<color>%1</color>]" ).arg( values[ 1 ] );
+      }
+      else if ( curLine.contains( "Description" ) )
+      {
+         QStringList values( curLine.split( ":" ) );
+
+         commitItem.commitDesc = QString( "[<color>%1</color>]" ).arg( values[ 1 ] );
+      }
+      else // File names
+      {
+         QStringList values( curLine.split( "\t" ) );
+
+         if ( values.count() == 3 )
+         {
+            PIPGIT_FILE_ITEM_T item;
+
+            item.added = values[0].toInt();
+            item.deleted = values[1].toInt();
+            item.fileName = values[2].simplified();
+
+            commitItem.files.append( item );
+         }
+      }
+   }
+
+   // Checking Last commit
+   if ( commitItem.files.count() > 0 )
+   {
+      gCommitList.append( commitItem );
+      commitItem.files.clear();
+   }
+
+   is.close();
+}
+
+void
+GetTotalDiff( QString aSHA1, QString aSHA2, PIPGIT_STATE_T aType )
+{
+   QProcess proc;
+   gSummaryList.clear();
+   QString cmd = "git diff %1 %2...%3";
+
+   switch ( aType )
+   {
+   case PIPGIT_STATE_INSPECTION:
+      cmd = cmd.arg( "--numstat " ).arg( aSHA1 ).arg( aSHA2 );
+      break;
+   case PIPGIT_STATE_BR:
+      cmd = cmd.arg( "--name-status " ).arg( aSHA1 ).arg( aSHA2 );
+      break;
+   default:
+      break;
+   }
+
+   proc.start( cmd, QIODevice::ReadOnly );
    // Show process output
    proc.waitForReadyRead();
 
@@ -303,301 +590,65 @@ QList< PIPGIT_ITEM_T > GetDiff( QString aSHA1, QString aSHA2 )
    {
       foreach ( QString curSting, tmpStrList )
       {
-         QStringList curItemList = curSting.split( "\t" );
 
-         if ( curItemList.count() == 3 )
+         switch ( aType )
          {
-            PIPGIT_ITEM_T itemInfo;
+         case PIPGIT_STATE_INSPECTION:
+         {
+            QStringList curItemList = curSting.split( "\t" );
 
-            itemInfo.added    = curItemList[0].simplified().toInt();
-            itemInfo.deleted  = curItemList[1].simplified().toInt();
-            itemInfo.fileName = curItemList[2].simplified();
+            if ( curItemList.count() == 3 )
+            {
+               PIPGIT_FILE_ITEM_T itemInfo;
 
-            ItemsList.append( itemInfo );
+               itemInfo.added    = curItemList[0].simplified().toInt();
+               itemInfo.deleted  = curItemList[1].simplified().toInt();
+               itemInfo.fileName = curItemList[2].simplified();
+
+               gSummaryList.append( itemInfo );
+            }
+            break;
+         }
+         case PIPGIT_STATE_BR:
+         {
+            QStringList curItemList = curSting.split( "\t" );
+
+            if ( curItemList.count() == 2 )
+            {
+               PIPGIT_FILE_ITEM_T file;
+
+               file.changeType = curItemList[0].simplified();
+               file.fileName   = curItemList[1].simplified();
+
+               gSummaryBR.files.append( file );
+            }
+
+            break;
+         }
+         default:
+            break;
          }
       }
    }
 
-   return ItemsList;
+   return;
 }
 
-QString GetCurrentBranch()
+void
+GetInspectionDetails()
 {
-   QProcess proc;
-   proc.start( "git branch", QIODevice::ReadOnly );
-   // Show process output
-   proc.waitForReadyRead();
+   int totalChanged = 0;
 
-   QString branchesStr( proc.readAllStandardOutput().data() );
-
-   proc.close();
-
-   QStringList branches;
-
-   branches = branchesStr.split( "\n" );
-
-   foreach ( QString branch, branches )
+   foreach ( PIPGIT_FILE_ITEM_T item, gSummaryList )
    {
-      if ( branch.contains( '*' ) == true )
+      if ( item.added == item.deleted )
       {
-         return branch.mid( 2 );
-      }
-   }
-
-   return "[ Unknown ]";
-}
-
-void PrintInfo( PIPGIT_STATE_T aState )
-{
-   QStringList list = workDir.entryList();
-   QString shId, userName, description;
-   QStringList tmpSHASplit, tmpUserSplit, tmpDescriptionSplit;
-   QStringList fileNames;
-   QString lastSHAId, lastUserName, lastCommitDesc;
-   unsigned int commitsNum = 0;
-
-   foreach ( QString filename, list )
-   {
-      QString userEmail;
-
-      if ( filename == "." || filename == ".." || filename == TMP_FILE )
-      {
-         continue;
-      }
-
-      QString patchToOpen = QString( "%1/%2" ).arg( workPath ).arg( filename );
-      is.open( patchToOpen.toStdString().c_str() );
-
-      if ( is.good() )
-      {
-         shId.clear();
-         userName.clear();
-         description.clear();
-
-         is.getline( c, 256 );       // get character from file
-         shId.append( &c[0] );
-         tmpSHASplit = shId.split( " " );
-         lastSHAId = tmpSHASplit[ 1 ];
-
-         is.getline( c, 256 );       // get character from file
-         userName.append( &c[0] );
-         tmpUserSplit = userName.split( " " );
-         userEmail = tmpUserSplit[ tmpUserSplit.length() - 1 ];
-         userEmail.chop( 1 );
-         lastUserName = userEmail = userEmail.mid( 1 );
-
-         is.getline( c, 256 );       // skip line
-
-         is.getline( c, 256 );       // get description
-         description.append( &c[0] );
-         tmpDescriptionSplit = description.split( "] " );
-         lastCommitDesc = tmpDescriptionSplit[ 1 ];
-      }
-
-      if ( aState == PIPGIT_STATE_INSPECTION )
-      {
-         cout << endl << setw(20) << "Commit No:" << "[" << ++commitsNum << "]";
-         cerr << endl << setw(20) << "Commit No:" << "[" << commitsNum << "]";
-
-         if ( config.colors == true )
-         {
-            #ifdef PIPGIT_LINUX
-            cout << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[\033[1;32m%1\033[00m]").arg( lastSHAId ).toStdString().c_str()<< endl;
-            cout << setw(20) << "Developer email:" << QString( "[\033[1;33m%1\033[00m]" ).arg( lastUserName ).toStdString().c_str() << endl;
-            cout << setw(20) << "Commit Description:" << QString( "[\033[1;32m%1\033[00m]" ).arg( lastCommitDesc ).toStdString().c_str() << endl << endl;
-            #else
-            cout << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[%1]").arg( lastSHAId ).toStdString().c_str()<< endl;
-            cout << setw(20) << "Developer email:" << QString( "[%1]" ).arg( lastUserName ).toStdString().c_str() << endl;
-            cout << setw(20) << "Commit Description:" << QString( "[%1]" ).arg( lastCommitDesc ).toStdString().c_str() << endl << endl;
-            #endif
-         }
-         else
-         {
-            cout << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[%1]").arg( lastSHAId ).toStdString().c_str()<< endl;
-            cout << setw(20) << "Developer email:" << QString( "[%1]" ).arg( lastUserName ).toStdString().c_str() << endl;
-            cout << setw(20) << "Commit Description:" << QString( "[%1]" ).arg( lastCommitDesc ).toStdString().c_str() << endl << endl;
-         }
-
-         cerr << endl << setw(20) << "GIT Commit SHA ID:" << QString( "[%1]").arg( lastSHAId ).toStdString().c_str()<< endl;
-         cerr << setw(20) << "Developer email:" << QString( "[%1]" ).arg( lastUserName ).toStdString().c_str() << endl;
-         cerr << setw(20) << "Commit Description:" << QString( "[%1]" ).arg( lastCommitDesc ).toStdString().c_str() << endl << endl;
-
-         cout << "----------------------------------------------------------------------------------------------" << endl;
-         cerr << "----------------------------------------------------------------------------------------------" << endl;
-
-         if ( config.colors == true )
-         {
-            #ifdef PIPGIT_LINUX
-            cout << "\033[1;32mAdded:\033[00m    |    \033[1;31mDeleted:\033[00m   |   Changed File:" << endl;
-            #else
-            cout << "Added:    |    Deleted:   |   Changed File:" << endl;
-            #endif
-         }
-         else
-         {
-            cout << "Added:    |    Deleted:   |   Changed File:" << endl;
-         }
-
-         cerr << "Added:    |    Deleted:   |   Changed File:" << endl;
-         cout << "----------------------------------------------------------------------------------------------" << endl;
-         cerr << "----------------------------------------------------------------------------------------------" << endl;
-      }
-
-      while ( is.good() )     // loop while extraction from file is possible
-      {
-         is.getline( c, 256 );       // get character from file
-
-         if ( is.good() )
-         {
-            if ( strstr( c, "-==-" ) )
-            {
-               isProcced = true;
-               continue;
-            }
-            // else if( strstr( c, "diff --git" ) && isProcced)
-            else if( strstr( c, "--" ) && isProcced)
-            {
-               isProcced = false;
-
-               break;
-            }
-
-            if ( isProcced && strlen( c ) > 0 )
-            {
-               int added = 0, deleted = 0;
-               const char *pStrFileName = NULL;
-               QStringList strItems = QString( c ).split( "\t", QString::SkipEmptyParts );
-
-               added = strItems[0].toInt();
-               deleted = strItems[1].toInt();
-               fileNames.append( strItems[2] );
-
-               if ( added == deleted )
-               {
-                  totalChanged += added;
-               }
-               else
-               {
-                  totalChanged += added + deleted;
-               }
-
-               for ( unsigned int index = 0; index < strlen( c ); index++ )
-               {
-                  if ( isalpha( c[ index ] ) )
-                  {
-                     pStrFileName = c + index;
-                     break;
-                  }
-               }
-
-               if ( aState == PIPGIT_STATE_INSPECTION )
-               {
-                  if ( config.colors == true )
-                  {
-                     #ifdef PIPGIT_LINUX
-                     cout << " \033[1;32m" << setw(15) << added << "\033[00m" << "\033[1;31m" << setw(15) << deleted << "\033[00m" << std::setw( 15 ) << pStrFileName << endl;
-                     #else
-                     cout << " " << setw(15) << added << setw(15) << deleted << std::setw( 15 ) << pStrFileName << endl;
-                     #endif
-                  }
-                  else
-                  {
-                     cout << " " << setw(15) << added << setw(15) << deleted << std::setw( 15 ) << pStrFileName << endl;
-                  }
-
-                  cerr << " " << setw(15) << added << setw(15) << deleted << std::setw( 15 ) << pStrFileName << endl;
-               }
-            }
-         }
-      }
-
-      is.close();
-   }
-
-   if ( aState == PIPGIT_STATE_INSPECTION && gItemslist.count() > 0 )
-   {
-      cout << endl << "SUMMARY CHANGES FOR [" << commitsNum << "] COMMIT(s):" << endl;
-      cerr << endl << "SUMMARY CHANGES FOR [" << commitsNum << "] COMMIT(s):" << endl;
-
-      cout << "----------------------------------------------------------------------------------------------" << endl;
-      cerr << "----------------------------------------------------------------------------------------------" << endl;
-
-      if ( config.colors == true )
-      {
-#ifdef PIPGIT_LINUX
-         cout << "\033[1;32mAdded:\033[00m    |    \033[1;31mDeleted:\033[00m   |   Changed File:" << endl;
-#else
-         cout << "Added:    |    Deleted:   |   Changed File:" << endl;
-#endif
+         totalChanged += item.added;
       }
       else
       {
-         cout << "Added:    |    Deleted:   |   Changed File:" << endl;
+         totalChanged += item.added + item.deleted;
       }
-
-      cerr << "Added:    |    Deleted:   |   Changed File:" << endl;
-      cout << "----------------------------------------------------------------------------------------------" << endl;
-      cerr << "----------------------------------------------------------------------------------------------" << endl;
-
-      foreach ( PIPGIT_ITEM_T item, gItemslist )
-      {
-         if ( config.colors == true )
-         {
-            #ifdef PIPGIT_LINUX
-            cout << " \033[1;32m" << setw(15) << item.added << "\033[00m" << "\033[1;31m" << setw(15) << item.deleted << "\033[00m" << std::setw( 15 ) << item.fileName.toStdString().c_str() << endl;
-            #else
-            cout << " " << setw(15) << item.added << setw(15) << item.deleted << std::setw( 15 ) << item.fileName.toStdString().c_str() << endl;
-            #endif
-         }
-         else
-         {
-            cout << " " << setw(15) << item.added << setw(15) << item.deleted << std::setw( 15 ) << item.fileName.toStdString().c_str() << endl;
-         }
-
-         cerr << " " << setw(15) << item.added << setw(15) << item.deleted << std::setw( 15 ) << item.fileName.toStdString().c_str() << endl;
-      }
-   }
-
-   if ( aState == PIPGIT_STATE_BR )
-   {
-      fileNames.removeDuplicates();
-
-      QString branch = GetCurrentBranch();
-
-      if ( config.colors == true )
-      {
-         #ifdef PIPGIT_LINUX
-         cout << "BRANCH: "  << "[\033[1;32m" << branch.toStdString().c_str()    << "\033[00m]" << endl;
-         cout << "SHAID:  "  << "[\033[1;32m" << lastSHAId.toStdString().c_str() << "\033[00m]" << endl;
-         cout << "USER:   "  << QString( "[\033[1;33m%1\033[00m]" ).arg( lastUserName ).toStdString().c_str() << endl << endl;
-         #else
-         cout << "BRANCH: "  << "[" << branch.toStdString().c_str()       << "]" << endl;
-         cout << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str()    << "]" << endl;
-         cout << "USER:   "  << "[" << lastUserName.toStdString().c_str() << "]" << endl << endl;
-         #endif
-      }
-      else
-      {
-         cout << "BRANCH: "  << "[" << branch.toStdString().c_str()       << "]" << endl;
-         cout << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str()    << "]" << endl;
-         cout << "USER:   "  << "[" << lastUserName.toStdString().c_str() << "]" << endl << endl;
-      }
-
-      cerr << "BRANCH: "  << "[" << branch.toStdString().c_str()       << "]" << endl;
-      cerr << "SHAID:  "  << "[" << lastSHAId.toStdString().c_str()    << "]" << endl;
-      cerr << "USER:   "  << "[" << lastUserName.toStdString().c_str() << "]" << endl << endl;
-
-      cout << "FILES:" << endl;
-      cerr << "FILES:" << endl;
-
-      foreach ( QString fileName, fileNames )
-      {
-         cout << "   " << fileName.toStdString().c_str() << endl;
-         cerr << "   " << fileName.toStdString().c_str() << endl;
-      }
-
-      cout << endl << "TESTED: [Yes/No]" << endl << "COMMENT:" << endl;
-      cerr << endl << "TESTED: [Yes/No]" << endl << "COMMENT:" << endl;
    }
 
    unsigned int inspectionTimeSecs  = totalChanged * 3600 / 150;
@@ -665,7 +716,35 @@ void PrintInfo( PIPGIT_STATE_T aState )
    }
 }
 
-void CleanUp()
+QString
+GetCurrentBranch()
+{
+   QProcess proc;
+   proc.start( "git branch", QIODevice::ReadOnly );
+   // Show process output
+   proc.waitForReadyRead();
+
+   QString branchesStr( proc.readAllStandardOutput().data() );
+
+   proc.close();
+
+   QStringList branches;
+
+   branches = branchesStr.split( "\n" );
+
+   foreach ( QString branch, branches )
+   {
+      if ( branch.contains( '*' ) == true )
+      {
+         return branch.mid( 2 );
+      }
+   }
+
+   return "[ Unknown ]";
+}
+
+void
+CleanUp()
 {
    QStringList listToRemoveFiles = workDir.entryList();
 
@@ -709,7 +788,7 @@ void Usage()
    }
    else
    {
-      cout << "Note: Order of parameters SHA1 & SHA2 make sence for \'git diff\', so, be a careful during typing!" << endl << endl;
+      cout << "Note: Order of parameters SHA1 & SHA2 make sense for \'git diff\', so, be a careful during typing!" << endl << endl;
    }
 }
 
