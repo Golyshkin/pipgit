@@ -59,18 +59,13 @@ char c[256] = { 0 };
 ifstream is;
 bool isProcced = false;
 unsigned int totalChanged = 0;
-PIPGIT_CONFIG_T config = { true, true };
+PIPGIT_CONFIG_T gConfig = { true, true };
 QList< PIPGIT_COMMIT_ITEM_T > gCommitList;
 QList< PIPGIT_FILE_ITEM_T > gSummaryList;
 PIPGIT_COMMIT_ITEM_T gSummaryBR;
 
 QString workPath = QDir::tempPath() + PIPGIT_FOLDER;
 QDir workDir( workPath );
-
-//---------------
-bool ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] );
-void PrintInfo( PIPGIT_STATE_T aState );
-//---------------
 
 void Usage();
 void CopyRight( PIPGIT_STATE_T aState );
@@ -86,6 +81,7 @@ void GetBRDetailes();
 void PrintString( QString aStr1, QString aStr2, int aColor, bool aPrintToLog, int aWith = 20 );
 void PrintFilesHeader();
 void PrintFiles( int aAdded, int aDeleted, QString aFileName );
+void PrintComparingStatus( QString aSHA1, QString aSHA2 );
 void PrintInspection();
 void PrintBR();
 
@@ -135,8 +131,8 @@ int main( int argc, char *argv[] )
 
       if ( Configure() == true )
       {
-         GetDetailedDiff( argv[2], argv[3] );
-         GetTotalDiff( argv[2], argv[3] );
+         GetDetailedDiff( argv[2], arg3 );
+         GetTotalDiff( argv[2], arg3 );
          PrintInspection();
       }
    }
@@ -193,12 +189,12 @@ SetConfig( int &aArgc, char *aArgv[] )
             {
                if ( configPair[0].toLower() == "colors" && configPair[1].toLower() == "no" )
                {
-                  config.colors = false;
+                  gConfig.colors = false;
                }
 
-               if ( configPair[0].toLower() == "detailed" && configPair[1].toLower() == "no" )
+               if ( configPair[0].toLower() == "details" && configPair[1].toLower() == "no" )
                {
-                  config.detailedStat = false;
+                  gConfig.detailedStat = false;
                }
             }
          }
@@ -215,112 +211,16 @@ SetConfig( int &aArgc, char *aArgv[] )
       {
          --aArgc;
 
-         if ( curArg[0].toLower() == "--detailed" && curArg[1].toLower() == "yes" )
+         if ( curArg[0].toLower() == "--details" && curArg[1].toLower() == "no" )
          {
-            config.detailedStat = true;
+            gConfig.detailedStat = false;
          }
          else
          {
-            config.detailedStat = false;
+            gConfig.detailedStat = true;
          }
       }
    }
-}
-
-
-bool
-ExtractPatches( PIPGIT_STATE_T aState, int argc, char *argv[] )
-{
-   CopyRight( aState );
-
-   if ( !workDir.exists() && workDir.mkdir( workPath ) == false )
-   {
-      cout << endl << QString( "Error: Couldn't create [%1] directory..." ).arg( workPath ).toStdString().c_str();
-
-      return false;
-   }
-
-   return true;
-
-
-   QString cmd, arg3 = (argc == 4) ? argv[3] : "";
-
-   if ( arg3.length() > 5 )
-   {
-      if ( config.colors == true )
-      {
-         #ifdef PIPGIT_LINUX
-         cout << endl << QString( "Comparing [\033[1;30m%1\033[00m] with [\033[1;30m%2\033[00m] ... " ).arg( QString( argv[ 2 ] ) ).arg( arg3 ).toStdString().c_str();
-         #else
-         cout << endl << QString( "Comparing [%1] with [%2]" ).arg( QString( argv[ 2 ] ) ).arg( arg3 ).toStdString().c_str();
-         #endif
-      }
-      else
-      {
-         cout << endl << QString( "Comparing [%1] with [%2]" ).arg( QString( argv[ 2 ] ) ).arg( arg3 ).toStdString().c_str();
-      }
-
-      if ( system( cmd.toStdString().c_str() ) != 0 )
-      {
-         // TODO: Handle error
-      }
-
-      if ( config.colors == true )
-      {
-         #ifdef PIPGIT_LINUX
-         cout << "[ \033[1;32mDONE\033[00m ]" << endl << endl;
-         #else
-         cout << "[ DONE ]" << endl << endl;
-         #endif
-      }
-      else
-      {
-         cout << "[ DONE ]" << endl << endl;
-      }
-   }
-   else
-   {
-      if ( QString( argv[2] ).toInt() == -1 )
-      {
-         cout << endl << "Comparing last commit ... ";
-      }
-      else if ( strlen( argv[2] ) > 5 )
-      {
-#ifdef PIPGIT_LINUX
-         cout << endl << QString( "Comparing [\033[1;30m%1\033[00m] with latest commit ... " ).arg( QString( argv[ 2 ] ) ).toStdString().c_str();
-#else
-         cout << endl << QString( "Comparing [%1] with latest commit ... " ).arg( QString( argv[ 2 ] ) ).toStdString().c_str();
-#endif
-      }
-      else
-      {
-         return false;
-      }
-
-      if ( system( cmd.toStdString().c_str() ) != 0 )
-      {
-         // TODO: Handle error
-      }
-
-      if ( config.colors == true )
-      {
-         #ifdef PIPGIT_LINUX
-         cout << "[ \033[1;32mDONE\033[00m ]" << endl << endl;
-         #else
-         cout << "[ DONE ]" << endl << endl;
-         #endif
-      }
-      else
-      {
-         cout << "[ DONE ]" << endl << endl;
-      }
-   }
-
-   #ifdef PIPGIT_DEBUG
-   cout << cmd.toStdString().c_str() << endl;
-   #endif
-
-   return true;
 }
 
 bool
@@ -340,29 +240,30 @@ void PrintInspection()
 {
    unsigned int index = 0;
 
-   CopyRight( PIPGIT_STATE_INSPECTION );
-
-   foreach ( PIPGIT_COMMIT_ITEM_T commit, gCommitList )
+   if ( gConfig.detailedStat == true )
    {
-      PrintString( "Commit No:", QString( "[%1]" ).arg( ++index ), 32, true );
-      PrintString( "GIT Commit SHA ID:", commit.shaid, 32, true );
-      PrintString( "Developer Name:", commit.autorName, 33, true );
-      PrintString( "Developer E-mail:", commit.autorEmail, 33, true );
-      PrintString( "Commit Date:", commit.commitDate, 32, true );
-      PrintString( "Commit Description:", commit.commitDesc, 32, true );
-
-      cout << endl;
-      cerr << endl;;
-
-      PrintFilesHeader();
-
-      foreach ( PIPGIT_FILE_ITEM_T file, commit.files )
+      foreach ( PIPGIT_COMMIT_ITEM_T commit, gCommitList )
       {
-         PrintFiles( file.added, file.deleted, file.fileName );
-      }
+         PrintString( "Commit No:", QString( "[%1]" ).arg( ++index ), 32, true );
+         PrintString( "GIT Commit SHA ID:", commit.shaid, 32, true );
+         PrintString( "Developer Name:", commit.autorName, 33, true );
+         PrintString( "Developer E-mail:", commit.autorEmail, 33, true );
+         PrintString( "Commit Date:", commit.commitDate, 32, true );
+         PrintString( "Commit Description:", commit.commitDesc, 32, true );
 
-      cout << endl;
-      cerr << endl;;
+         cout << endl;
+         cerr << endl;;
+
+         PrintFilesHeader();
+
+         foreach ( PIPGIT_FILE_ITEM_T file, commit.files )
+         {
+            PrintFiles( file.added, file.deleted, file.fileName );
+         }
+
+         cout << endl;
+         cerr << endl;;
+      }
    }
 
    cout << "TOTAL CHANGES FOR [" << gCommitList.count() << "] COMMIT(s):" << endl;
@@ -380,8 +281,6 @@ void PrintInspection()
 
 void PrintBR()
 {
-   CopyRight( PIPGIT_STATE_BR );
-
    PrintString( "GIT Commit SHA ID:", gCommitList[0].shaid, 32, true );
    PrintString( "Developer Name:", gCommitList[0].autorName, 33, true );
    PrintString( "Developer E-mail:", gCommitList[0].autorEmail, 33, true );
@@ -399,8 +298,8 @@ void PrintBR()
    cout << "FILES:" << endl;
    cerr << "FILES:" << endl;
 
-   cout << "----------------------------------------------------------------------------------------------" << endl << endl;
-   cerr << "----------------------------------------------------------------------------------------------" << endl << endl;
+   cout << "----------------------------------------------------------------------------------------------" << endl;
+   cerr << "----------------------------------------------------------------------------------------------" << endl;
 
    foreach ( PIPGIT_FILE_ITEM_T item, gSummaryBR.files )
    {
@@ -427,7 +326,7 @@ PrintString( QString aStr1, QString aStr2, int aColor, bool aPrintToLog, int aWi
       cerr << setw( aWith ) << aStr1.toStdString().c_str() << str.toStdString().c_str() << endl;
    }
 
-   if ( config.colors == true )
+   if ( gConfig.colors == true )
    {
 #ifdef PIPGIT_LINUX
       aStr2.replace( "<color>", QString( "\033[1;%1m" ).arg( aColor ) );
@@ -446,7 +345,7 @@ PrintFilesHeader()
 {
    PrintString( "----------------------------------------------------------------------------------------------", "",  0, true );
 
-   if ( config.colors == true )
+   if ( gConfig.colors == true )
    {
 #ifdef PIPGIT_LINUX
       cout << "\033[1;32mAdded:\033[00m    |    \033[1;31mDeleted:\033[00m   |   Changed File:" << endl;
@@ -465,9 +364,35 @@ PrintFilesHeader()
 }
 
 void
+Print2ColorText( QString aStr1, QString aStr2, int aColor, int aColor2 )
+{
+   QString str1( aStr1 ), str2( aStr2 );;
+
+   str1.replace( "<color>",  "" );
+   str1.replace( "</color>", "" );
+   str2.replace( "<color>",  "" );
+   str2.replace( "</color>", "" );
+
+   cerr << str1.toStdString().c_str() << str2.toStdString().c_str();
+
+   if ( gConfig.colors == true )
+   {
+#ifdef PIPGIT_LINUX
+      aStr1.replace( "<color>", QString( "\033[1;%1m" ).arg( aColor ) );
+      aStr1.replace( "</color>", "\033[00m" );
+
+      aStr2.replace( "<color>", QString( "\033[1;%1m" ).arg( aColor2 ) );
+      aStr2.replace( "</color>", "\033[00m" );
+#endif
+   }
+
+   cout << aStr1.toStdString().c_str() << aStr2.toStdString().c_str();
+}
+
+void
 PrintFiles( int aAdded, int aDeleted, QString aFileName )
 {
-   if ( config.colors == true )
+   if ( gConfig.colors == true )
    {
       #ifdef PIPGIT_LINUX
       cout << " \033[1;32m" << setw(15) << aAdded << "\033[00m" << "\033[1;31m" << setw(15) << aDeleted << "\033[00m" << std::setw( 15 ) << aFileName.toStdString().c_str() << endl;
@@ -484,12 +409,39 @@ PrintFiles( int aAdded, int aDeleted, QString aFileName )
 }
 
 void
+PrintComparingStatus( QString aSHA1, QString aSHA2 )
+{
+   if ( aSHA1.length() > 0 && aSHA2.length() > 0 )
+   {
+      Print2ColorText( QString( "Comparing [<color>%1</color>]" ).arg( aSHA1 ), QString( " with [<color>%2</color>] ... " ).arg( aSHA2 ), 30, 30 );
+   }
+   else
+   {
+      Print2ColorText( QString( "Comparing [<color>%1</color>]" ).arg( aSHA1 ), " with latest checked out commit ... ", 30, 30 );
+   }
+
+   if ( gConfig.colors == true )
+   {
+      #ifdef PIPGIT_LINUX
+      cout << "[ \033[1;32mDONE\033[00m ]" << endl << endl;
+      #else
+      cout << "[ DONE ]" << endl << endl;
+      #endif
+   }
+   else
+   {
+      cout << "[ DONE ]" << endl << endl;
+   }
+
+   cerr << "[ DONE ]" << endl << endl;
+}
+
+void
 GetDetailedDiff( QString aSHA1, QString aSHA2 )
 {
    QProcess proc;
    QString fileToSave = workPath + "/detailed_diff.log";
    char tmpBuf[ BUF_STR_SIZE + 1 ] = { 0 };
-//   int commitCount = 0;
    PIPGIT_COMMIT_ITEM_T commitItem;
 
    QString cmd = QString( "git log --numstat --pretty=format:\"Commit No:%nSHAID:%H%nAutor Name:%an%nAutor E-mail:%ae%nCommit Date:%aD%nDescription:%s%n\" %1...%2 >%3/detailed_diff.log" ).arg( aSHA1 ).arg( aSHA2 ).arg( workPath );
@@ -497,6 +449,9 @@ GetDetailedDiff( QString aSHA1, QString aSHA2 )
    #ifdef PIPGIT_DEBUG
    cout << cmd.toStdString().c_str() << endl;
    #endif
+
+   CopyRight( PIPGIT_STATE_INSPECTION );
+   PrintComparingStatus( aSHA1, aSHA2 );
 
    system( cmd.toStdString().c_str() );
 
@@ -510,15 +465,11 @@ GetDetailedDiff( QString aSHA1, QString aSHA2 )
 
       if ( curLine.contains( "Commit No" ) )
       {
-//         ++commitCount;
-
          if ( commitItem.files.count() > 0 )
          {
             gCommitList.append( commitItem );
             commitItem.files.clear();
          }
-
-//         commitItem.commitNumber = commitCount;
       }
       else if ( curLine.contains( "SHAID" ) )
       {
@@ -582,7 +533,7 @@ GetTotalDiff( QString aSHA1, QString aSHA2, PIPGIT_STATE_T aType )
 {
    QProcess proc;
    gSummaryList.clear();
-   QString cmd = "git diff %1 %2...%3";
+   QString cmd = "git diff %1 %2 %3";
 
    switch ( aType )
    {
@@ -595,6 +546,10 @@ GetTotalDiff( QString aSHA1, QString aSHA2, PIPGIT_STATE_T aType )
    default:
       break;
    }
+
+   #ifdef PIPGIT_DEBUG
+   cout << cmd.toStdString().c_str() << endl;
+   #endif
 
    proc.start( cmd, QIODevice::ReadOnly );
    // Show process output
@@ -731,7 +686,7 @@ PrintInspectionDetails()
 
    cout << endl;
 
-   if ( config.colors == true )
+   if ( gConfig.colors == true )
    {
       #ifdef PIPGIT_LINUX
       cout << "\033[1;30m==============================================================================================\033[00m" << endl;
@@ -757,7 +712,7 @@ PrintInspectionDetails()
 
    cerr << "==============================================================================================" << endl;
 
-   if ( config.colors == true )
+   if ( gConfig.colors == true )
    {
       #ifdef PIPGIT_LINUX
       cout << "\033[1;30m==============================================================================================\033[00m" << endl;
@@ -822,7 +777,7 @@ CleanUp()
 void Usage()
 {
    cout << "Usage:" << " pipgit <insp|br> <SHA ID1> [SHA ID2]" << endl;
-   cout << "===========================================================================" << endl;
+   cout << "----------------------------------------------------------------------------------------------" << endl;
    cout << "Parameter 1.   (insp|br) - Switch output information to Inspection or BR" << endl;
    cout << "Parameter 2,3. (SHA ID)  - Compare changes between SHA1 & SHA2" << endl;
 
@@ -830,7 +785,7 @@ void Usage()
    cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e 7deac3c8436afa6535432442543445\' - Calculates changes between SHA1 & SHA2" << endl;
    cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e\' - Calculates changes between selected SHA ID & latest commit" << endl << endl;
 
-   if ( config.colors == true )
+   if ( gConfig.colors == true )
    {
       cout << "\033[01;31mNote: Order of parameters SHA1 & SHA2 make sence for \'git diff\', so, be a careful during typing!\033[00m" << endl << endl;
    }
@@ -846,7 +801,7 @@ void CopyRight( PIPGIT_STATE_T aState )
    cout << QString( "PIPGIT util - v.%1 (Christmas Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" ).arg( PIPGIT_VER ).toStdString().c_str() << endl;
    cout << "----------------------------------------------------------------------------------------------" << endl;
 
-   if ( config.colors == true )
+   if ( gConfig.colors == true )
    {
       #ifdef PIPGIT_LINUX
       cout << "1. CR Tool Web-Page:         \033[1;33mhttps://bugtracking.teleca.com/Instances/IviCR\033[00m" << endl;
