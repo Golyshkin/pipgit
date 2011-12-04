@@ -80,7 +80,7 @@ bool Configure();
 void SetConfig( int &argc, char *argv[] );
 void GetTotalDiff( QString aSHA1, QString aSHA2 = QString(), PIPGIT_STATE_T aType = PIPGIT_STATE_INSPECTION );
 void GetDetailedDiff( QString aSHA1, QString aSHA2 = QString() );
-void GetInspectionDetails();
+void PrintInspectionDetails();
 void GetBRDetailes();
 
 void PrintString( QString aStr1, QString aStr2, int aColor, bool aPrintToLog, int aWith = 20 );
@@ -92,10 +92,24 @@ void PrintBR();
 int main( int argc, char *argv[] )
 {
    PIPGIT_STATE_T state = PIPGIT_STATE_NONE;
+   bool argsStatus = true;
 
    SetConfig( argc, argv );
 
-   if ( argc < 2 )
+   if ( argc < 3 )
+   {
+      argsStatus = false;
+   }
+   else
+   {
+      if ( ( argc == 3 && strlen( argv[2] ) < 10 ) ||
+           ( argc == 4 && strlen( argv[3] ) < 10 ) )
+      {
+         argsStatus = false;
+      }
+   }
+
+   if ( argsStatus == false )
    {
       CopyRight( state );
       Usage();
@@ -123,7 +137,6 @@ int main( int argc, char *argv[] )
       {
          GetDetailedDiff( argv[2], argv[3] );
          GetTotalDiff( argv[2], argv[3] );
-         GetInspectionDetails();
          PrintInspection();
       }
    }
@@ -325,9 +338,13 @@ Configure()
 
 void PrintInspection()
 {
+   unsigned int index = 0;
+
+   CopyRight( PIPGIT_STATE_INSPECTION );
+
    foreach ( PIPGIT_COMMIT_ITEM_T commit, gCommitList )
    {
-      PrintString( "Commit No:", QString( "[%1]" ).arg( commit.commitNumber ), 32, true );
+      PrintString( "Commit No:", QString( "[%1]" ).arg( ++index ), 32, true );
       PrintString( "GIT Commit SHA ID:", commit.shaid, 32, true );
       PrintString( "Developer Name:", commit.autorName, 33, true );
       PrintString( "Developer E-mail:", commit.autorEmail, 33, true );
@@ -348,8 +365,8 @@ void PrintInspection()
       cerr << endl;;
    }
 
-   cout << "TOTAL CHANGES FOR [" << gSummaryList.count() << "] COMMIT(s):" << endl;
-   cerr << "TOTAL CHANGES FOR [" << gSummaryList.count() << "] COMMIT(s):" << endl;
+   cout << "TOTAL CHANGES FOR [" << gCommitList.count() << "] COMMIT(s):" << endl;
+   cerr << "TOTAL CHANGES FOR [" << gCommitList.count() << "] COMMIT(s):" << endl;
 
    PrintFilesHeader();
 
@@ -357,10 +374,14 @@ void PrintInspection()
    {
       PrintFiles( item.added, item.deleted, item.fileName );
    }
+
+   PrintInspectionDetails();
 }
 
 void PrintBR()
 {
+   CopyRight( PIPGIT_STATE_BR );
+
    PrintString( "GIT Commit SHA ID:", gCommitList[0].shaid, 32, true );
    PrintString( "Developer Name:", gCommitList[0].autorName, 33, true );
    PrintString( "Developer E-mail:", gCommitList[0].autorEmail, 33, true );
@@ -371,25 +392,26 @@ void PrintBR()
    cout << endl;
    cerr << endl;;
 
-   cout << "==============================================================================================" << endl;
-   cerr << "==============================================================================================" << endl;
+   cerr << "----------------------------------------------------------------------------------------------" << endl;
+   cout << "----------------------------------------------------------------------------------------------" << endl;
+
 
    cout << "FILES:" << endl;
    cerr << "FILES:" << endl;
 
-   cout << "==============================================================================================" << endl;
-   cerr << "==============================================================================================" << endl;
+   cout << "----------------------------------------------------------------------------------------------" << endl << endl;
+   cerr << "----------------------------------------------------------------------------------------------" << endl << endl;
 
    foreach ( PIPGIT_FILE_ITEM_T item, gSummaryBR.files )
    {
-      PrintString( item.changeType, item.fileName, 32, true, 3 );
+      PrintString( item.changeType, item.fileName, 32, true, 14 );
    }
 
    cout << "----------------------------------------------------------------------------------------------" << endl;
    cerr << "----------------------------------------------------------------------------------------------" << endl;
 
-   cout << endl << "TESTED: [Yes/No]" << endl << "COMMENT:" << endl;
-   cerr << endl << "TESTED: [Yes/No]" << endl << "COMMENT:" << endl;
+   cout << endl << "TESTED: [Yes/No]" << endl << "COMMENT:" << endl << endl;
+   cerr << endl << "TESTED: [Yes/No]" << endl << "COMMENT:" << endl << endl;
 }
 
 void
@@ -467,7 +489,7 @@ GetDetailedDiff( QString aSHA1, QString aSHA2 )
    QProcess proc;
    QString fileToSave = workPath + "/detailed_diff.log";
    char tmpBuf[ BUF_STR_SIZE + 1 ] = { 0 };
-   int commitCount = 0;
+//   int commitCount = 0;
    PIPGIT_COMMIT_ITEM_T commitItem;
 
    QString cmd = QString( "git log --numstat --pretty=format:\"Commit No:%nSHAID:%H%nAutor Name:%an%nAutor E-mail:%ae%nCommit Date:%aD%nDescription:%s%n\" %1...%2 >%3/detailed_diff.log" ).arg( aSHA1 ).arg( aSHA2 ).arg( workPath );
@@ -488,7 +510,7 @@ GetDetailedDiff( QString aSHA1, QString aSHA2 )
 
       if ( curLine.contains( "Commit No" ) )
       {
-         ++commitCount;
+//         ++commitCount;
 
          if ( commitItem.files.count() > 0 )
          {
@@ -496,7 +518,7 @@ GetDetailedDiff( QString aSHA1, QString aSHA2 )
             commitItem.files.clear();
          }
 
-         commitItem.commitNumber = commitCount;
+//         commitItem.commitNumber = commitCount;
       }
       else if ( curLine.contains( "SHAID" ) )
       {
@@ -536,8 +558,8 @@ GetDetailedDiff( QString aSHA1, QString aSHA2 )
          {
             PIPGIT_FILE_ITEM_T item;
 
-            item.added = values[0].toInt();
-            item.deleted = values[1].toInt();
+            item.added    = values[0].toInt();
+            item.deleted  = values[1].toInt();
             item.fileName = values[2].simplified();
 
             commitItem.files.append( item );
@@ -590,7 +612,6 @@ GetTotalDiff( QString aSHA1, QString aSHA2, PIPGIT_STATE_T aType )
    {
       foreach ( QString curSting, tmpStrList )
       {
-
          switch ( aType )
          {
          case PIPGIT_STATE_INSPECTION:
@@ -618,6 +639,40 @@ GetTotalDiff( QString aSHA1, QString aSHA2, PIPGIT_STATE_T aType )
                PIPGIT_FILE_ITEM_T file;
 
                file.changeType = curItemList[0].simplified();
+
+               if ( file.changeType.compare( "A", Qt::CaseInsensitive ) == 0 )
+               {
+                  file.changeType = "Added";
+               }
+               else if ( file.changeType.compare( "C", Qt::CaseInsensitive ) == 0 )
+               {
+                  file.changeType = "Copied";
+               }
+               else if ( file.changeType.compare( "D", Qt::CaseInsensitive ) == 0 )
+               {
+                  file.changeType = "Deleted";
+               }
+               else if ( file.changeType.compare( "M", Qt::CaseInsensitive ) == 0 )
+               {
+                  file.changeType = "Modified";
+               }
+               else if ( file.changeType.compare( "R", Qt::CaseInsensitive ) == 0 )
+               {
+                  file.changeType = "Renamed";
+               }
+               else if ( file.changeType.compare( "T", Qt::CaseInsensitive ) == 0 )
+               {
+                  file.changeType = "Changed Type";
+               }
+               else if ( file.changeType.compare( "U", Qt::CaseInsensitive ) == 0 )
+               {
+                  file.changeType = "Unmerged";
+               }
+               else
+               {
+                  file.changeType = "Unknown";
+               }
+
                file.fileName   = curItemList[1].simplified();
 
                gSummaryBR.files.append( file );
@@ -635,7 +690,7 @@ GetTotalDiff( QString aSHA1, QString aSHA2, PIPGIT_STATE_T aType )
 }
 
 void
-GetInspectionDetails()
+PrintInspectionDetails()
 {
    int totalChanged = 0;
 
@@ -764,23 +819,16 @@ CleanUp()
    }
 }
 
-void PrintInfoBR()
-{
-}
-
 void Usage()
 {
+   cout << "Usage:" << " pipgit <insp|br> <SHA ID1> [SHA ID2]" << endl;
    cout << "===========================================================================" << endl;
-   cout << "Usage:" << " pipgit <insp|br> <SHA ID1 SHA ID2> | -1" << endl;
-   cout << "===========================================================================" << endl;
-   cout << "Parameter 1. (insp|br) - Switch output information to Inspection or BR" << endl;
-   cout << "Parameter 2. (SHA ID)  - Compare changes between SHA1 & SHA2" << endl;
-   cout << "Parameter 2. -1        - Show last commit changes" << endl;
+   cout << "Parameter 1.   (insp|br) - Switch output information to Inspection or BR" << endl;
+   cout << "Parameter 2,3. (SHA ID)  - Compare changes between SHA1 & SHA2" << endl;
 
    cout << endl << "Examples:" << endl;
    cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e 7deac3c8436afa6535432442543445\' - Calculates changes between SHA1 & SHA2" << endl;
-   cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e\' - Calculates changes between selected SHA ID & latest commit" << endl;
-   cout << "\'pipgit insp -1\' - Show last commit changes" << endl << endl;
+   cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e\' - Calculates changes between selected SHA ID & latest commit" << endl << endl;
 
    if ( config.colors == true )
    {
@@ -826,4 +874,7 @@ void CopyRight( PIPGIT_STATE_T aState )
       cerr << QString( "PIPGIT util - v.%1 (Christmas Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" ).arg( PIPGIT_VER ).toStdString().c_str() << endl;
       cerr << "----------------------------------------------------------------------------------------------" << endl;
    }
+
+   cout << endl;
+   cerr << endl;
 }
