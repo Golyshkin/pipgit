@@ -171,6 +171,7 @@ SetConfig( int &aArgc, char *aArgv[] )
 {
    // Checking .pipgit
    QFile configFile( QDir::homePath() + "/.pipgit" );
+   int argc = aArgc;
 
    if ( configFile.exists() == true )
    {
@@ -202,7 +203,7 @@ SetConfig( int &aArgc, char *aArgv[] )
    }
 
    // Checking ARGV overides .pipgit
-   for ( int index = 0; index < aArgc; index++ )
+   for ( int index = 0; index < argc; index++ )
    {
       QString argString = aArgv[ index ];
       QStringList curArg = argString.split( "=" );
@@ -211,13 +212,14 @@ SetConfig( int &aArgc, char *aArgv[] )
       {
          --aArgc;
 
-         if ( curArg[0].toLower() == "--details" && curArg[1].toLower() == "no" )
+         if ( curArg[0].toLower() == "--details" )
          {
-            gConfig.detailedStat = false;
+            gConfig.detailedStat = ( curArg[1].toLower() == "no" ) ? false : true;
          }
-         else
+
+         if ( curArg[0].toLower() == "--colors" )
          {
-            gConfig.detailedStat = true;
+            gConfig.colors = (curArg[1].toLower() == "no" ) ? false : true;
          }
       }
    }
@@ -383,10 +385,16 @@ Print2ColorText( QString aStr1, QString aStr2, int aColor, int aColor2 )
 
       aStr2.replace( "<color>", QString( "\033[1;%1m" ).arg( aColor2 ) );
       aStr2.replace( "</color>", "\033[00m" );
+
+      cout << aStr1.toStdString().c_str() << aStr2.toStdString().c_str();
+#else
+   cout << str1.toStdString().c_str() << str2.toStdString().c_str();
 #endif
    }
-
-   cout << aStr1.toStdString().c_str() << aStr2.toStdString().c_str();
+   else
+   {
+      cout << str1.toStdString().c_str() << str2.toStdString().c_str();
+   }
 }
 
 void
@@ -776,22 +784,29 @@ CleanUp()
 
 void Usage()
 {
-   cout << "Usage:" << " pipgit <insp|br> <SHA ID1> [SHA ID2]" << endl;
+   cout << "Usage:" << " pipgit <insp|br> <SHA ID1> [SHA ID2] [Options]" << endl;
    cout << "----------------------------------------------------------------------------------------------" << endl;
    cout << "Parameter 1.   (insp|br) - Switch output information to Inspection or BR" << endl;
    cout << "Parameter 2,3. (SHA ID)  - Compare changes between SHA1 & SHA2" << endl;
 
    cout << endl << "Examples:" << endl;
    cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e 7deac3c8436afa6535432442543445\' - Calculates changes between SHA1 & SHA2" << endl;
-   cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e\' - Calculates changes between selected SHA ID & latest commit" << endl << endl;
+   cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e\' - Calculates changes between selected SHA ID & latest commit" << endl;
+   cout << "\'pipgit insp 7deac3c8436afa65a64f5567869f6b9d2a39a33e --details=no --colors=no\' - Calculates changes between selected SHA ID & latest commit without details & color output" << endl << endl;
+
+   const char * const NOTE = "Note: Order of parameters SHA1 & SHA2 make sense for \'git diff\', so, be a careful during typing!";
 
    if ( gConfig.colors == true )
    {
+      #ifdef PIPGIT_LINUX
       cout << "\033[01;31mNote: Order of parameters SHA1 & SHA2 make sence for \'git diff\', so, be a careful during typing!\033[00m" << endl << endl;
+      #else
+      cout << NOTE << endl << endl;
+      #endif
    }
    else
    {
-      cout << "Note: Order of parameters SHA1 & SHA2 make sense for \'git diff\', so, be a careful during typing!" << endl << endl;
+      cout << NOTE << endl << endl;
    }
 }
 
