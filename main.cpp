@@ -142,8 +142,8 @@ int main( int argc, char *argv[] )
 
       if ( Configure() == true )
       {
-         GetDetailedDiff( argv[2], argv[3] );
-         GetTotalDiff( argv[2], argv[3], PIPGIT_STATE_BR );
+         GetDetailedDiff( argv[2], arg3 );
+         GetTotalDiff( argv[2], arg3, PIPGIT_STATE_BR );
          PrintBR();
       }
       else

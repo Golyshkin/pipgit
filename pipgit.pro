@@ -17,7 +17,7 @@ windows:{
    target.path=/usr/local/bin
 } else {
    DEFINES+=PIPGIT_LINUX
-   target.path=.
+   target.path=/usr/bin
 }
 
 CONFIG(debug, debug|release){
