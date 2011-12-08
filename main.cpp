@@ -48,7 +48,7 @@ typedef struct
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.6.5";
+const char *PIPGIT_VER = "0.6.6";
 const int BUF_STR_SIZE = 255;
 
 const char *PIPGIT_FOLDER = "/pipgit";
@@ -258,9 +258,16 @@ void PrintInspection()
 
          PrintFilesHeader();
 
-         foreach ( PIPGIT_FILE_ITEM_T file, commit.files )
+         if ( commit.files.count() > 0 )
          {
-            PrintFiles( file.added, file.deleted, file.fileName );
+            foreach ( PIPGIT_FILE_ITEM_T file, commit.files )
+            {
+               PrintFiles( file.added, file.deleted, file.fileName );
+            }
+         }
+         else
+         {
+            PrintFiles( 0, 0, "Processed merge..." );
          }
 
          cout << endl;
@@ -473,7 +480,7 @@ GetDetailedDiff( QString aSHA1, QString aSHA2 )
 
       if ( curLine.contains( "Commit No" ) )
       {
-         if ( commitItem.files.count() > 0 )
+         if ( commitItem.shaid.length() > 0 )
          {
             gCommitList.append( commitItem );
             commitItem.files.clear();
