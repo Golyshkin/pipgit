@@ -48,7 +48,7 @@ typedef struct
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.6.6";
+const char *PIPGIT_VER = "0.6.7";
 const int BUF_STR_SIZE = 255;
 
 const char *PIPGIT_FOLDER = "/pipgit";
@@ -275,9 +275,7 @@ void PrintInspection()
       }
    }
 
-   cout << "TOTAL CHANGES FOR [" << gCommitList.count() << "] COMMIT(s):" << endl;
-   cerr << "TOTAL CHANGES FOR [" << gCommitList.count() << "] COMMIT(s):" << endl;
-
+   PrintString( QString( "TOTAL CHANGES FOR [%1]" ).arg( gCommitList.count() ), QString(" FOR BRANCH [<color>%1</color>]").arg( GetCurrentBranch() ),32, true );
    PrintFilesHeader();
 
    foreach ( PIPGIT_FILE_ITEM_T item, gSummaryList )
