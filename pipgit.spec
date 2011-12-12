@@ -6,7 +6,7 @@ License:        GPL v2
 Summary:        PIPGIT Tool
 Url:            http://www.teleca.com
 Group:          Applications/Development
-Source0:        %{name}.tar.bz2
+Source0:        %{name}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildRequires:  libqt4-devel gcc-c++
 Requires:       git >= 1.7.1
@@ -16,7 +16,6 @@ Requires:       git >= 1.7.1
 
 %prep
 %setup -q -n %{name}
-set -m
 
 %build
 qmake
@@ -29,3 +28,6 @@ make install INSTALL_ROOT=%{buildroot}
 %defattr(-,root,root,-)
 %{_bindir}/pipgit
 
+%changelog
+* Alexander Golyshkin <Alexander.Golyshkin@teleca.com> v.0.6.7
+- Initial release v.0.4

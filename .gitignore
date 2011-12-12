@@ -1,0 +1,9 @@
+*.a
+*.dll
+*.o
+Makefile*
+moc_*
+*.patch
+*.user
+release/*
+debug/*

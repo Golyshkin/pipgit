@@ -1,2 +1,17 @@
 PIPGIT Code changes inspection tool for GIT 
 Alexander.Golyshkin@gmail.com
+
+PIPGIT suports OpenSuse OBS system! Following files used by OBS:
+
+RPM package (RedHat, OpenSuse, etc)
+
+    pipgit.spec
+
+DEB package (XUbuntu, Fedora, etc)
+
+    debian.changelog
+    debian.control
+    debian.rules
+    pipgit.dsc
+
+Package should be uploaded with 'pipgit.tar.gz' name

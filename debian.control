@@ -1,0 +1,11 @@
+Source: pipgit
+Section: pipgit
+Priority: optional
+Maintainer: Alexander Golyshkin <Alexander.Golyshkin@teleca.com>
+Build-Depends: debhelper (>= 4.1.16), libc6 (>= 2.3.6-6~), libgcc1 (>= 1:4.1.1), libqtcore4 (>= 4:4.7.0~beta1), libstdc++6 (>= 4.4.0), qt4-qmake, libqt4-dev
+
+Package: pipgit
+Architecture: any
+Depends: ${shlibs:Depends}, git (>= 1.7.1)
+Description: pipgit
+ pipgit 
