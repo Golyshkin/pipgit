@@ -29,5 +29,5 @@ make install INSTALL_ROOT=%{buildroot}
 %{_bindir}/pipgit
 
 %changelog
-* Alexander Golyshkin <Alexander.Golyshkin@teleca.com> v.0.6.7
-- Initial release v.0.4
+* Mon Dec 12 2011 Alexander Golyshkin 0.6.7
+- Fixed BR screen
