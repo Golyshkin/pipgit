@@ -3,10 +3,10 @@
 # GNU copyright 1997 to 1999 by Joey Hess.
 
 # Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
+export DH_VERBOSE=1
 
 # This is the debhelper compatibility version to use.
-export DH_COMPAT=4
+export DH_COMPAT=5
 
 CFLAGS = -g
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
@@ -45,7 +45,8 @@ install: build
 
 	# Add here commands to install the package
 	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
-	make install DESTDIR=/usr/src/packages/BUILD/debian/pipgit
+	install -g 0 -o 0 -d debian/pipgit/usr/bin/
+	install -o 0 -g 0 -p -m755 pipgit debian/pipgit/usr/bin/pipgit
 	# --- end custom part for installing
 
 # Build architecture-independent files here.
