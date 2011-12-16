@@ -48,7 +48,7 @@ typedef struct
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.6.7";
+const char *PIPGIT_VER = "0.6.8";
 const int BUF_STR_SIZE = 255;
 
 const char *PIPGIT_FOLDER = "/pipgit";
@@ -565,16 +565,18 @@ GetTotalDiff( QString aSHA1, QString aSHA2, PIPGIT_STATE_T aType )
    #endif
 
    proc.start( cmd, QIODevice::ReadOnly );
-   // Show process output
-   proc.waitForReadyRead();
+   proc.waitForFinished();
 
-   QString tmpStr( proc.readAllStandardOutput().data() );
-
-   proc.close();
-
+   QByteArray outputArray = proc.readAllStandardOutput();
+   QTextStream textStream( outputArray );
    QStringList tmpStrList;
 
-   tmpStrList = tmpStr.split( "\n" );
+   while ( !textStream.atEnd() )
+   {
+      tmpStrList.append( textStream.readLine() );
+   }
+
+   proc.close();
 
    if ( tmpStrList.count() > 0 )
    {
