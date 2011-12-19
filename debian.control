@@ -7,5 +7,14 @@ Build-Depends: debhelper (>= 4.1.16), libc6 (>= 2.3.6-6~), libgcc1 (>= 1:4.1.1),
 Package: pipgit
 Architecture: any
 Depends: ${shlibs:Depends}, git (>= 1.7.1)
-Description: pipgit
- pipgit 
+Description: PIPGIT Code changes inspection tool for GIT <Alexander.Golyshkin@gmail.com>
+ * PIPGIT tool was developed as helper tool for fast creating code inspections and code BRs based on generic coding standards
+ * PIPGIT tool allows to calculate code changes in any GIT repositories
+ * PIPGIT tool is fast and has user friendly interface
+ * PIPGIT tool has internal help
+ * PIPGIT tool is really degrease inspection creating time for developers
+ * PIPGIT tool available under LINUX & WINDOWS
+ * PIPGIT tool could be configured through <home folder>/.pipgit file
+ * PIPGIT tool supports content pipe redirection to file using “> <filename>” command
+ * PIPGIT tool available for Windows/Linux (RPM,DEB) platforms
+

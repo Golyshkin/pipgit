@@ -3,5 +3,6 @@ pipgit (0.6.8-1) stable; urgency=low
   * Initial Release
   * Fixed BR screen
   * Fixed QProcess error
+  * Fixed QtProcess error which skipped part of output result
 
  -- Alexander Golyshkin <Alexander.Golyshkin@teleca.com>  Thu, 12 Dec 2011 10:50:38 +0100

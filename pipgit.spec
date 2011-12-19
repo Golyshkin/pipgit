@@ -1,7 +1,7 @@
 # Spec for OBS system. Checked on build.opensuse.org OBS platform
 Name:           pipgit
 Version:        0.6.8
-Release:        3
+Release:        1
 License:        GPL v2
 Summary:        PIPGIT Tool
 Url:            http://www.teleca.com
@@ -29,5 +29,7 @@ make install INSTALL_ROOT=%{buildroot}
 %{_bindir}/pipgit
 
 %changelog
+* Mon Dec 19 2011 Alexander Golyshkin 0.6.8
+- Fixed QtProcess error which skipped part of output result
 * Mon Dec 12 2011 Alexander Golyshkin 0.6.7
 - Fixed BR screen
