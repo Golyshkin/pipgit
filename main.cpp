@@ -48,7 +48,7 @@ typedef struct
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.6.8";
+const char *PIPGIT_VER = "0.6.9";
 const int BUF_STR_SIZE = 255;
 
 const char *PIPGIT_FOLDER = "/pipgit";
@@ -744,16 +744,17 @@ PrintInspectionDetails()
 QString
 GetCurrentBranch()
 {
+   QString retBranch, branchesStr;
    QProcess proc;
+   QStringList branches;
+
    proc.start( "git branch", QIODevice::ReadOnly );
    // Show process output
-   proc.waitForReadyRead();
+   proc.waitForFinished();
 
-   QString branchesStr( proc.readAllStandardOutput().data() );
+   branchesStr = proc.readAllStandardOutput().data();
 
    proc.close();
-
-   QStringList branches;
 
    branches = branchesStr.split( "\n" );
 
@@ -761,11 +762,35 @@ GetCurrentBranch()
    {
       if ( branch.contains( '*' ) == true )
       {
-         return branch.mid( 2 );
+         retBranch = branch.mid( 2 );
+         break;
       }
    }
 
-   return "[ Unknown ]";
+   // Step 2. We need to find origin branch if it exists (pushed)
+   if ( retBranch.length() > 0 )
+   {
+      proc.start( QString( "git branch -r" ), QIODevice::ReadOnly );
+      // Show process output
+      proc.waitForFinished();
+
+      branchesStr = proc.readAllStandardOutput().data();
+
+      proc.close();
+
+      branches = branchesStr.split( "\n" );
+
+      foreach ( QString branch, branches )
+      {
+         if ( branch.contains( retBranch ) == true )
+         {
+            retBranch = branch.mid( 2 );
+            break;
+         }
+      }
+   }
+
+   return ( retBranch.length() > 0 ) ? retBranch : "[ Unknown ]";
 }
 
 void
