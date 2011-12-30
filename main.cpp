@@ -48,7 +48,7 @@ typedef struct
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.6.9";
+const char *PIPGIT_VER = "0.7.0";
 const int BUF_STR_SIZE = 255;
 
 const char *PIPGIT_FOLDER = "/pipgit";
@@ -782,7 +782,7 @@ GetCurrentBranch()
 
       foreach ( QString branch, branches )
       {
-         if ( branch.contains( retBranch ) == true )
+         if ( branch.endsWith( retBranch ) == true )
          {
             retBranch = branch.mid( 2 );
             break;
@@ -790,7 +790,7 @@ GetCurrentBranch()
       }
    }
 
-   return ( retBranch.length() > 0 ) ? retBranch : "[ Unknown ]";
+   return ( retBranch.length() > 0 ) ? retBranch : "Unknown";
 }
 
 void
