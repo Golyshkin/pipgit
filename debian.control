@@ -12,7 +12,7 @@ Description: PIPGIT Code changes inspection tool for GIT <Alexander.Golyshkin@gm
  * PIPGIT tool allows to calculate code changes in any GIT repositories
  * PIPGIT tool is fast and has user friendly interface
  * PIPGIT tool has internal help
- * PIPGIT tool is really degrease inspection creating time for developers
+ * PIPGIT tool really reduces the time to create an inspection for developers
  * PIPGIT tool available under LINUX & WINDOWS
  * PIPGIT tool could be configured through <home folder>/.pipgit file
  * PIPGIT tool supports content pipe redirection to file using “> <filename>” command
