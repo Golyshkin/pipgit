@@ -1,6 +1,6 @@
 # Spec for OBS system. Checked on build.opensuse.org OBS platform
 Name:           pipgit
-Version:        0.7.1
+Version:        0.7.2
 Release:        1
 License:        GPL v2
 Summary:        PIPGIT Tool

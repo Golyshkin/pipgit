@@ -1,4 +1,4 @@
-pipgit (0.7.1-0) stable; urgency=low
+pipgit (0.7.2) stable; urgency=low
 
   * Fixed bug with git date
   * Improved inspection output
