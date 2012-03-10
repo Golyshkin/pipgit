@@ -1,6 +1,6 @@
-pipgit (0.7.0-1) stable; urgency=low
+pipgit (0.7.1-0) stable; urgency=low
 
-  * Added functionality for tracking ORIGIN branches (BR mode)
-  * Fixed minor bug with searching branches
+  * Fixed bug with git date
+  * Improved inspection output
 
  -- Alexander Golyshkin <Alexander.Golyshkin@teleca.com>  Thu, 27 Dec 2011 10:50:38 +0100

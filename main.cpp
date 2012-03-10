@@ -48,10 +48,10 @@ typedef struct
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.7.0";
+const char *PIPGIT_VER = "0.7.1";
 const int BUF_STR_SIZE = 255;
 
-const char *PIPGIT_FOLDER = "/pipgit";
+const char *PIPGIT_FOLDER   = "/pipgit";
 const char *PIPGIT_INSP_LOG = "pipgit.inspection.log";
 const char *PIPGIT_BR_LOG   = "pipgit.br.log";
 
@@ -275,12 +275,15 @@ void PrintInspection()
       }
    }
 
-   PrintString( QString( "TOTAL CHANGES FOR [%1]" ).arg( gCommitList.count() ), QString(" FOR BRANCH [<color>%1</color>]").arg( GetCurrentBranch() ),32, true );
-   PrintFilesHeader();
-
-   foreach ( PIPGIT_FILE_ITEM_T item, gSummaryList )
+   if ( gCommitList.count() > 1 )
    {
-      PrintFiles( item.added, item.deleted, item.fileName );
+      PrintString( QString( "TOTAL [%1] CHANGES FOR BRANCH " ).arg( gCommitList.count() ), QString("[<color>%1</color>]").arg( GetCurrentBranch() ), 32, true );
+      PrintFilesHeader();
+
+      foreach ( PIPGIT_FILE_ITEM_T item, gSummaryList )
+      {
+         PrintFiles( item.added, item.deleted, item.fileName );
+      }
    }
 
    PrintInspectionDetails();
@@ -452,7 +455,6 @@ PrintComparingStatus( QString aSHA1, QString aSHA2 )
 void
 GetDetailedDiff( QString aSHA1, QString aSHA2 )
 {
-   QProcess proc;
    QString fileToSave = workPath + "/detailed_diff.log";
    char tmpBuf[ BUF_STR_SIZE + 1 ] = { 0 };
    PIPGIT_COMMIT_ITEM_T commitItem;
@@ -466,7 +468,9 @@ GetDetailedDiff( QString aSHA1, QString aSHA2 )
    CopyRight( PIPGIT_STATE_INSPECTION );
    PrintComparingStatus( aSHA1, aSHA2 );
 
-   system( cmd.toStdString().c_str() );
+   int result = system( cmd.toStdString().c_str() );
+   // Need for disabling Qt warning
+   Q_UNUSED( result );
 
    is.open( fileToSave.toStdString().c_str() );
 
@@ -506,7 +510,7 @@ GetDetailedDiff( QString aSHA1, QString aSHA2 )
       {
          QStringList values( curLine.split( ":" ) );
 
-         commitItem.commitDate = QString( "[<color>%1</color>]" ).arg( values[ 1 ] );
+         commitItem.commitDate = QString( "[<color>%1:%2:%3</color>]" ).arg( values[ 1 ] ).arg( values[ 2 ] ).arg( values[ 3 ].left( 2 ) );
       }
       else if ( curLine.contains( "Description" ) )
       {
@@ -873,7 +877,7 @@ void CopyRight( PIPGIT_STATE_T aState )
    if ( aState != PIPGIT_STATE_NONE )
    {
       cerr << "----------------------------------------------------------------------------------------------" << endl;
-      cerr << QString( "PIPGIT util - v.%1 (Christmas Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" ).arg( PIPGIT_VER ).toStdString().c_str() << endl;
+      cerr << QString( "PIPGIT util - v.%1 (March Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" ).arg( PIPGIT_VER ).toStdString().c_str() << endl;
       cerr << "----------------------------------------------------------------------------------------------" << endl;
    }
 
