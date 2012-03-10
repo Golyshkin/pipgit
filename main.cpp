@@ -849,7 +849,7 @@ void Usage()
 void CopyRight( PIPGIT_STATE_T aState )
 {
    cout << "----------------------------------------------------------------------------------------------" << endl;
-   cout << QString( "PIPGIT util - v.%1 (Christmas Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" ).arg( PIPGIT_VER ).toStdString().c_str() << endl;
+   cout << QString( "PIPGIT util - v.%1 (March Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" ).arg( PIPGIT_VER ).toStdString().c_str() << endl;
    cout << "----------------------------------------------------------------------------------------------" << endl;
 
    if ( gConfig.colors == true )
