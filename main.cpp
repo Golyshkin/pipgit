@@ -149,26 +149,6 @@ int main( int argc, char *argv[] )
          PrintBR();
       }
    }
-   else if ( arg1 == "all" )
-   {
-      if ( Configure() == true )
-      {
-         GetDetailedDiff( argv[2], arg3 );
-
-         // Inspection
-         GetTotalDiff( argv[2], arg3 );
-
-         ferr.open ( QDir( QDir::current() ).dirName().append( PIPGIT_INSP_LOG ).toStdString().c_str() );
-         PrintInspection();
-         ferr.close();
-
-         // BR
-         GetTotalDiff( argv[2], arg3, PIPGIT_STATE_BR );
-
-         ferr.open ( QDir( QDir::current() ).dirName().append( PIPGIT_BR_LOG ).toStdString().c_str() );
-         PrintBR();
-      }
-   }
    else
    {
       CopyRight( state );
@@ -838,9 +818,9 @@ CleanUp()
 
 void Usage()
 {
-   cout << "Usage:" << " pipgit <insp|br|all> <SHA ID1> [SHA ID2] [Options]" << endl;
+   cout << "Usage:" << " pipgit <insp|br> <SHA ID1> [SHA ID2] [Options]" << endl;
    cout << "----------------------------------------------------------------------------------------------" << endl;
-   cout << "Parameter 1.   (insp|br|all) - Switch output information to Inspection/BR or both" << endl;
+   cout << "Parameter 1.   (insp|br) - Switch output information to Inspection or BR" << endl;
    cout << "Parameter 2,3. (SHA ID)  - Compare changes between SHA1 & SHA2" << endl;
 
    cout << endl << "Examples:" << endl;
