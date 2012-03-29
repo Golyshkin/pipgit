@@ -48,12 +48,12 @@ typedef struct
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.7.1";
+const char *PIPGIT_VER = "0.8";
 const int BUF_STR_SIZE = 255;
 
 const char *PIPGIT_FOLDER   = "/pipgit";
-const char *PIPGIT_INSP_LOG = "pipgit.inspection.log";
-const char *PIPGIT_BR_LOG   = "pipgit.br.log";
+const char *PIPGIT_INSP_LOG = ".inspection.log";
+const char *PIPGIT_BR_LOG   = ".br.log";
 
 char c[256] = { 0 };
 ifstream is;
@@ -69,6 +69,8 @@ QDir workDir( workPath );
 
 void Usage();
 void CopyRight( PIPGIT_STATE_T aState );
+void CopyRightHat( bool aOutput = true );
+
 void CleanUp();
 QString GetCurrentBranch();
 bool Configure();
@@ -127,7 +129,7 @@ int main( int argc, char *argv[] )
 
    if ( arg1 == "insp" )
    {
-      ferr.open ( PIPGIT_INSP_LOG );
+      ferr.open ( QDir( QDir::current() ).dirName().append( PIPGIT_INSP_LOG ).toStdString().c_str() );
 
       if ( Configure() == true )
       {
@@ -138,7 +140,7 @@ int main( int argc, char *argv[] )
    }
    else if ( arg1 == "br" )
    {
-      ferr.open ( PIPGIT_BR_LOG );
+      ferr.open ( QDir( QDir::current() ).dirName().append( PIPGIT_BR_LOG ).toStdString().c_str() );
 
       if ( Configure() == true )
       {
@@ -146,9 +148,25 @@ int main( int argc, char *argv[] )
          GetTotalDiff( argv[2], arg3, PIPGIT_STATE_BR );
          PrintBR();
       }
-      else
+   }
+   else if ( arg1 == "all" )
+   {
+      if ( Configure() == true )
       {
-         Usage();
+         GetDetailedDiff( argv[2], arg3 );
+
+         // Inspection
+         GetTotalDiff( argv[2], arg3 );
+
+         ferr.open ( QDir( QDir::current() ).dirName().append( PIPGIT_INSP_LOG ).toStdString().c_str() );
+         PrintInspection();
+         ferr.close();
+
+         // BR
+         GetTotalDiff( argv[2], arg3, PIPGIT_STATE_BR );
+
+         ferr.open ( QDir( QDir::current() ).dirName().append( PIPGIT_BR_LOG ).toStdString().c_str() );
+         PrintBR();
       }
    }
    else
@@ -846,11 +864,28 @@ void Usage()
    }
 }
 
+void CopyRightHat( bool aOutput )
+{
+   QString str1( "----------------------------------------------------------------------------------------------" );
+   QString str2( "PIPGIT util - v.%1 (April Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" );
+
+   if ( aOutput == true )
+   {
+      cout << str1.toStdString().c_str() << endl;
+      cout << str2.arg( PIPGIT_VER ).toStdString().c_str() << endl;
+      cout << str1.toStdString().c_str() << endl;
+   }
+   else
+   {
+      cerr << str1.toStdString().c_str() << endl;
+      cerr << str2.arg( PIPGIT_VER ).toStdString().c_str() << endl;
+      cerr << str1.toStdString().c_str() << endl;
+   }
+}
+
 void CopyRight( PIPGIT_STATE_T aState )
 {
-   cout << "----------------------------------------------------------------------------------------------" << endl;
-   cout << QString( "PIPGIT util - v.%1 (March Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" ).arg( PIPGIT_VER ).toStdString().c_str() << endl;
-   cout << "----------------------------------------------------------------------------------------------" << endl;
+   CopyRightHat();
 
    if ( gConfig.colors == true )
    {
@@ -876,9 +911,7 @@ void CopyRight( PIPGIT_STATE_T aState )
 
    if ( aState != PIPGIT_STATE_NONE )
    {
-      cerr << "----------------------------------------------------------------------------------------------" << endl;
-      cerr << QString( "PIPGIT util - v.%1 (March Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" ).arg( PIPGIT_VER ).toStdString().c_str() << endl;
-      cerr << "----------------------------------------------------------------------------------------------" << endl;
+      CopyRightHat( false );
    }
 
    cout << endl;
