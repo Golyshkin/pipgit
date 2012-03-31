@@ -317,8 +317,8 @@ void PrintBR()
    cout << "----------------------------------------------------------------------------------------------" << endl;
    cerr << "----------------------------------------------------------------------------------------------" << endl;
 
-   cout << endl << "TESTED: [Yes/No]" << endl << "COMMENT:" << endl << endl;
-   cerr << endl << "TESTED: [Yes/No]" << endl << "COMMENT:" << endl << endl;
+   cout << endl << "TESTED: [Yes/No]" << endl << "COMMENT: N/A" << endl << endl;
+   cerr << endl << "TESTED: [Yes/No]" << endl << "COMMENT: N/A" << endl << endl;
 }
 
 void
