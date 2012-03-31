@@ -29,7 +29,7 @@ make install INSTALL_ROOT=%{buildroot}
 %{_bindir}/pipgit
 
 %changelog
-* San Mar 31 2012 Alexander Golyshkin 0.8.1
+* Sun Mar 31 2012 Alexander Golyshkin 0.8.1
 * Sat Mar 10 2012 Alexander Golyshkin 0.7.1
 * Mon Dec 19 2011 Alexander Golyshkin 0.6.8
 - Fixed QtProcess error which skipped part of output result
