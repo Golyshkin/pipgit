@@ -1,4 +1,4 @@
-pipgit (0.8.5) stable; urgency=low
+pipgit (0.8.6) stable; urgency=low
 
   * Improved inspection output
   * Improved BR output
