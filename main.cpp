@@ -48,10 +48,11 @@ typedef struct
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.8";
+const char *PIPGIT_VER = "0.8.5";
 const int BUF_STR_SIZE = 512;
 
 const char *PIPGIT_FOLDER   = "/pipgit";
+const QString PIPGIT_COMPONENT_NAME = QDir( QDir::current() ).dirName();
 const char *PIPGIT_INSP_LOG = ".inspection.log";
 const char *PIPGIT_BR_LOG   = ".br.log";
 
@@ -129,7 +130,7 @@ int main( int argc, char *argv[] )
 
    if ( arg1 == "insp" )
    {
-      ferr.open ( QDir( QDir::current() ).dirName().append( PIPGIT_INSP_LOG ).toStdString().c_str() );
+      ferr.open ( QString( PIPGIT_COMPONENT_NAME ).append( PIPGIT_INSP_LOG ).toStdString().c_str() );
 
       if ( Configure() == true )
       {
@@ -140,7 +141,7 @@ int main( int argc, char *argv[] )
    }
    else if ( arg1 == "br" )
    {
-      ferr.open ( QDir( QDir::current() ).dirName().append( PIPGIT_BR_LOG ).toStdString().c_str() );
+      ferr.open ( QString( PIPGIT_COMPONENT_NAME ).append( PIPGIT_BR_LOG ).toStdString().c_str() );
 
       if ( Configure() == true )
       {
@@ -244,7 +245,7 @@ void PrintInspection()
    {
       foreach ( PIPGIT_COMMIT_ITEM_T commit, gCommitList )
       {
-         PrintString( "Commit No:", QString( "[%1]" ).arg( ++index ), 32, true );
+         PrintString( "Commit No:", QString( "[%1] - [<color>%2</color>]" ).arg( ++index ).arg( PIPGIT_COMPONENT_NAME ), 33, true );
          PrintString( "GIT Commit SHA ID:", commit.shaid, 32, true );
          PrintString( "Developer Name:", commit.autorName, 33, true );
          PrintString( "Developer E-mail:", commit.autorEmail, 33, true );
@@ -275,7 +276,7 @@ void PrintInspection()
 
    if ( gCommitList.count() > 1 )
    {
-      PrintString( QString( "TOTAL [%1] CHANGES FOR BRANCH " ).arg( gCommitList.count() ), QString("[<color>%1</color>]").arg( GetCurrentBranch() ), 32, true );
+      PrintString( QString( "[%1]: TOTAL [%2] CHANGES ON BRANCH " ).arg( PIPGIT_COMPONENT_NAME ).arg( gCommitList.count() ), QString("[<color>%1</color>]").arg( GetCurrentBranch() ), 32, true );
       PrintFilesHeader();
 
       foreach ( PIPGIT_FILE_ITEM_T item, gSummaryList )
@@ -289,6 +290,7 @@ void PrintInspection()
 
 void PrintBR()
 {
+   PrintString( "Component Name:", QString( "[<color>" ).append( PIPGIT_COMPONENT_NAME ).append( "</color>]" ), 33, true );
    PrintString( "GIT Commit SHA ID:", gCommitList[0].shaid, 32, true );
    PrintString( "Developer Name:", gCommitList[0].autorName, 33, true );
    PrintString( "Developer E-mail:", gCommitList[0].autorEmail, 33, true );
@@ -317,8 +319,8 @@ void PrintBR()
    cout << "----------------------------------------------------------------------------------------------" << endl;
    cerr << "----------------------------------------------------------------------------------------------" << endl;
 
-   cout << endl << "TESTED: [Yes/No]" << endl << "COMMENT: N/A" << endl << endl;
-   cerr << endl << "TESTED: [Yes/No]" << endl << "COMMENT: N/A" << endl << endl;
+   cout << endl << "TESTED:  Yes/No" << endl << "COMMENT: N/A" << endl << endl;
+   cerr << endl << "TESTED: Yes/No" << endl << "COMMENT: N/A" << endl << endl;
 }
 
 void
