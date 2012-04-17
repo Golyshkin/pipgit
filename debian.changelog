@@ -1,6 +1,6 @@
-pipgit (0.8.1) stable; urgency=low
+pipgit (0.8.5) stable; urgency=low
 
-  * Fixed buffer overflow more than 256 bytes in description
   * Improved inspection output
+  * Improved BR output
 
- -- Alexander Golyshkin <Alexander.Golyshkin@teleca.com>  San, 31 Dec 2012 10:50:38 +0100
+ -- Alexander Golyshkin <Alexander.Golyshkin@teleca.com>  San, 17 Apr 2012 10:50:38 +0100
