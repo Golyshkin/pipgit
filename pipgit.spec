@@ -1,6 +1,6 @@
 # Spec for OBS system. Checked on build.opensuse.org OBS platform
 Name:           pipgit
-Version:        0.8.6
+Version:        0.8.7
 Release:        1
 License:        GPL v2
 Summary:        PIPGIT Tool
@@ -29,6 +29,7 @@ make install INSTALL_ROOT=%{buildroot}
 %{_bindir}/pipgit
 
 %changelog
+* Wed May 04 2012 Alexander Golyshkin 0.8.7
 * Tue Apr 17 2012 Alexander Golyshkin 0.8.5
 * Sun Mar 31 2012 Alexander Golyshkin 0.8.1
 * Sat Mar 10 2012 Alexander Golyshkin 0.7.1

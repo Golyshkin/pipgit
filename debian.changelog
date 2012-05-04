@@ -1,6 +1,6 @@
-pipgit (0.8.6) stable; urgency=low
+pipgit (0.8.7) stable; urgency=low
 
   * Improved inspection output
-  * Improved BR output
+  * Fixed incorrect output for key --details=no
 
  -- Alexander Golyshkin <Alexander.Golyshkin@teleca.com>  San, 17 Apr 2012 10:50:38 +0100
