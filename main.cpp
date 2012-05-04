@@ -48,7 +48,7 @@ typedef struct
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.8.6";
+const char *PIPGIT_VER = "0.8.7";
 const int BUF_STR_SIZE = 512;
 
 const char *PIPGIT_FOLDER   = "/pipgit";
