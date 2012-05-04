@@ -253,7 +253,7 @@ void PrintInspection()
          PrintString( "Commit Description:", commit.commitDesc, 32, true );
 
          cout << endl;
-         cerr << endl;;
+         cerr << endl;
 
          PrintFilesHeader();
 
@@ -270,11 +270,11 @@ void PrintInspection()
          }
 
          cout << endl;
-         cerr << endl;;
+         cerr << endl;
       }
    }
 
-   if ( gCommitList.count() > 1 )
+   if ( gCommitList.count() > 1 || gConfig.detailedStat == false )
    {
       PrintString( QString( "[%1]: TOTAL [%2] CHANGES ON BRANCH " ).arg( PIPGIT_COMPONENT_NAME ).arg( gCommitList.count() ), QString("[<color>%1</color>]").arg( GetCurrentBranch() ), 32, true );
       PrintFilesHeader();
