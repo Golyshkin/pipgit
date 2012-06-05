@@ -1,4 +1,4 @@
-pipgit (0.8.7) stable; urgency=low
+pipgit (0.8.8) stable; urgency=low
 
   * Improved inspection output
   * Added some new fields by CM request
