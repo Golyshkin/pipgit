@@ -852,7 +852,7 @@ void Usage()
 void CopyRightHat( bool aOutput )
 {
    QString str1( "----------------------------------------------------------------------------------------------" );
-   QString str2( "PIPGIT util - v.%1 (April Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" );
+   QString str2( "PIPGIT util - v.%1 (June Edition) Alexander.Golyshkin@teleca.com (c) 2011-2012" );
 
    if ( aOutput == true )
    {
