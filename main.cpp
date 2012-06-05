@@ -48,7 +48,7 @@ typedef struct
 
 } PIPGIT_CONFIG_T;
 
-const char *PIPGIT_VER = "0.8.7";
+const char *PIPGIT_VER = "0.8.8";
 const int BUF_STR_SIZE = 512;
 
 const char *PIPGIT_FOLDER   = "/pipgit";
@@ -251,6 +251,7 @@ void PrintInspection()
          PrintString( "Developer E-mail:", commit.autorEmail, 33, true );
          PrintString( "Commit Date:", commit.commitDate, 32, true );
          PrintString( "Commit Description:", commit.commitDesc, 32, true );
+         PrintString( "Branch:", QString( "[<color>%1</color>]" ).arg( GetCurrentBranch() ), 32, true );
 
          cout << endl;
          cerr << endl;
@@ -297,6 +298,8 @@ void PrintBR()
    PrintString( "Commit Date:", gCommitList[0].commitDate, 32, true );
    PrintString( "Commit Description:", gCommitList[0].commitDesc, 32, true );
    PrintString( "Branch:", QString( "[<color>%1</color>]" ).arg( GetCurrentBranch() ), 32, true );
+   PrintString( "OBS Link:", "[<color>N/A</color>]", 33, true );
+   PrintString( "Unresolved Dep:", "[<color>N/A</color>]", 33, true );
 
    cout << endl;
    cerr << endl;;

@@ -1,6 +1,6 @@
 pipgit (0.8.7) stable; urgency=low
 
   * Improved inspection output
-  * Fixed incorrect output for key --details=no
+  * Added some new fields by CM request
 
- -- Alexander Golyshkin <Alexander.Golyshkin@teleca.com>  San, 17 Apr 2012 10:50:38 +0100
+ -- Alexander Golyshkin <Alexander.Golyshkin@teleca.com>  San, 05 Jun 2012 10:50:38 +0100

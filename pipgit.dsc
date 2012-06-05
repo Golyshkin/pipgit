@@ -1,6 +1,6 @@
 Format: 1.0
 Source: pipgit
-Version: 0.8.7
+Version: 0.8.8
 Binary: pipgit
 Maintainer: Alexander Golyshkin <Alexander.Golyshkin@teleca.com>
 Architecture: any
